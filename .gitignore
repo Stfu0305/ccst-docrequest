@@ -1,0 +1,16 @@
+/vendor
+/node_modules
+.env
+.env.*
+*.log
+.DS_Store
+/storage/*.key
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*.log
+/public/storage
+/.idea
+/.vscode
+composer.lock
+package-lock.json
