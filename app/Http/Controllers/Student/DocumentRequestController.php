@@ -66,7 +66,7 @@ class DocumentRequestController extends Controller
             'reference_number' => 'TEMP',
             'user_id'          => $user->id,
             'student_number'   => $user->student_number ?? 'N/A',
-            'full_name'        => $user->name,
+            'full_name'        => $user->first_name . ' ' . ($user->middle_name ? $user->middle_name . ' ' : '') . $user->last_name,
             'contact_number'   => $validated['contact_number'],
             'course_program'   => $validated['course_program'],
             'year_level'       => $validated['year_level'],

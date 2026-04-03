@@ -554,7 +554,7 @@
                         </div>
                     @endif
                 </div>
-                <div class="user-name">{{ auth()->user()->name }}</div>
+                <div class="user-name">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</div>
                 <span class="role-badge">Student</span>
             </div>
 

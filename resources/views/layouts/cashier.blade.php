@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="check-notifications" content="{{ session('check_notifications') ? 'true' : 'false' }}">
 
     {{-- Bell JS reads these URLs from meta tags instead of hardcoding paths --}}
     <meta name="notif-fetch-url"    content="{{ route('cashier.notifications.index') }}">
@@ -336,14 +337,52 @@
             flex-shrink: 0;
         }
 
-        /* ── MAIN CONTENT ── */
+        /* ── MAIN CONTENT with background image ── */
         .main-content {
             flex: 1;
             padding: 28px 24px;
             padding-right: 320px;
             min-width: 0;
-            overflow-y: auto;
+            overflow-y: hidden;  /* Change from 'auto' to 'hidden' - removes page scroll */
             overflow-x: hidden;
+            background: url('{{ asset("images/page-bg.jpeg") }}') center/cover no-repeat fixed;
+            position: relative;
+            height: calc(100vh - var(--header-h) - var(--footer-h)); /* Fixed height */
+        }
+
+        /* Semi-transparent overlay for readability */
+        .main-content::before {
+            content: '';
+            position: fixed;
+            top: var(--header-h);
+            left: var(--sidebar-w);
+            right: 300px;
+            bottom: var(--footer-h);
+            background: rgba(255, 255, 255, 0.45);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Ensure content container doesn't scroll */
+        .main-content > * {
+            position: relative;
+            z-index: 1;
+            overflow-y: visible;
+        }
+
+        /* The stats row and cards should be visible without scroll */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+            overflow-y: visible;
+        }
+
+        /* Only the table body scrolls, not the page */
+        .table-scroll-body {
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         /* ── RIGHT PANEL ── */
@@ -444,6 +483,36 @@
             color: var(--white);
             font-weight: 500;
         }
+
+        /* Notification Styles */
+        .notif-item.unread {
+            background: #f5fdf7;
+            border-left: 3px solid #1B6B3A;
+        }
+
+        .notif-item:hover {
+            background: #f7faf7;
+        }
+
+        .notif-item .notif-msg {
+            font-size: 0.85rem;
+            color: #1a1a1a;
+            line-height: 1.4;
+        }
+
+        .notif-item .notif-time {
+            font-size: 0.72rem;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .bell-empty {
+            text-align: center;
+            padding: 28px 14px;
+            color: var(--text-gray);
+            font-size: 0.83rem;
+        }
+
     </style>
 
     @stack('styles')
@@ -457,23 +526,17 @@
         </span>
         <div class="header-right">
 
-            {{-- BELL BUTTON --}}
-            <button class="bell-btn" id="bellBtn" title="Notifications" type="button">
+            <button class="bell-btn" id="bellBtn">
                 <i class="bi bi-bell-fill"></i>
                 <span class="bell-badge" id="bellBadge" style="display:none;">0</span>
             </button>
-
-            {{-- BELL DROPDOWN PANEL --}}
             <div class="bell-dropdown" id="bellDropdown">
                 <div class="bell-dropdown-header">
                     <span><i class="bi bi-bell me-1"></i> Notifications</span>
-                    <button class="bell-mark-all" id="bellMarkAll" type="button">Mark all as read</button>
+                    <button class="bell-mark-all" id="bellMarkAll">Mark all as read</button>
                 </div>
                 <div class="bell-dropdown-body" id="bellDropdownBody">
-                    <div class="bell-empty">
-                        <i class="bi bi-bell-slash"></i>
-                        No new notifications
-                    </div>
+                    <div class="bell-empty">No new notifications</div>
                 </div>
             </div>
 
@@ -538,20 +601,7 @@
 
         {{-- MAIN CONTENT --}}
         <main class="main-content">
-            <div class="flash-container">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
-                        <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
-                        <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
-            </div>
+            {{-- No flash messages - all notifications go to bell dropdown --}}
 
             @yield('content')
         </main>
@@ -575,107 +625,363 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-    (function () {
-        const FETCH_URL    = document.querySelector('meta[name="notif-fetch-url"]').content;
-        const READ_URL     = document.querySelector('meta[name="notif-read-url"]').content;
-        const READ_ALL_URL = document.querySelector('meta[name="notif-readall-url"]').content;
-        const CSRF         = document.querySelector('meta[name="csrf-token"]').content;
+    // ═══════════════════════════════════════════════════════════════════════
+    // CCST NOTIFICATION SYSTEM - Cashier (Laravel Database Notifications)
+    // ═══════════════════════════════════════════════════════════════════════
 
-        const bellBtn      = document.getElementById('bellBtn');
-        const bellBadge    = document.getElementById('bellBadge');
+    (function() {
+        // Configuration
+        const FETCH_URL = '/cashier/notifications';
+        const READ_URL_TEMPLATE = '/cashier/notifications/__ID__/read';
+        const READ_ALL_URL = '/cashier/notifications/mark-all-read';
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
+        // State
+        let lastNotificationCount = 0;
+        let hasAutoOpenedThisSession = false;
+        
+        // DOM Elements
+        const bellBtn = document.getElementById('bellBtn');
+        const bellBadge = document.getElementById('bellBadge');
         const bellDropdown = document.getElementById('bellDropdown');
-        const bellBody     = document.getElementById('bellDropdownBody');
-        const markAllBtn   = document.getElementById('bellMarkAll');
-
-        function esc(str) {
+        const bellBody = document.getElementById('bellDropdownBody');
+        const markAllBtn = document.getElementById('bellMarkAll');
+        
+        // Helper: Escape HTML
+        function escapeHtml(str) {
             if (!str) return '';
             return String(str)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
-
-        function setBadge(count) {
+        
+        // Update badge count
+        function updateBadge(count) {
+            if (!bellBadge) return;
             if (count > 0) {
-                bellBadge.textContent = count > 9 ? '9+' : count;
+                bellBadge.textContent = count > 99 ? '99+' : count;
                 bellBadge.style.display = 'flex';
             } else {
                 bellBadge.style.display = 'none';
             }
         }
-
-        function renderList(notifications) {
+        
+        // Render notifications in dropdown (regular - no highlight)
+        function renderNotifications(notifications) {
+            if (!bellBody) return;
+            
             if (!notifications || notifications.length === 0) {
-                bellBody.innerHTML = '<div class="bell-empty"><i class="bi bi-bell-slash"></i>No new notifications</div>';
+                bellBody.innerHTML = `
+                    <div class="bell-empty">
+                        <i class="bi bi-bell-slash"></i>
+                        No notifications yet.
+                    </div>
+                `;
                 return;
             }
+            
             let html = '';
-            notifications.forEach(function (n) {
-                html += '<a href="' + esc(n.url) + '" class="notif-item" data-id="' + esc(n.id) + '">' +
-                        '<div class="notif-msg">' + esc(n.message) + '</div>' +
-                        '<div class="notif-time">' + esc(n.time) + '</div></a>';
+            notifications.forEach(function(notif) {
+                const unreadClass = notif.read ? '' : 'unread';
+                
+                html += `
+                    <div class="notif-item ${unreadClass}" data-id="${escapeHtml(notif.id)}" data-url="${escapeHtml(notif.url)}" style="cursor:pointer; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
+                        <div style="flex:1;">
+                            <div class="notif-msg" style="font-size:0.85rem; color:#1a1a1a; line-height:1.4;">${escapeHtml(notif.message)}</div>
+                            <div class="notif-time" style="font-size:0.72rem; color:#999; margin-top:4px;">${escapeHtml(notif.time)}</div>
+                        </div>
+                    </div>
+                `;
             });
+            
             bellBody.innerHTML = html;
-            bellBody.querySelectorAll('.notif-item').forEach(function (link) {
-                link.addEventListener('click', function (e) {
+            
+            // Add click handlers to mark as read and redirect
+            document.querySelectorAll('.notif-item').forEach(function(item) {
+                item.addEventListener('click', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     const id = this.dataset.id;
-                    const url = this.getAttribute('href');
-                    fetch(READ_URL.replace('__ID__', id), {
-                        method: 'PATCH',
-                        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin',
-                    }).finally(function () { window.location.href = url; });
+                    const url = this.dataset.url;
+                    
+                    if (id && READ_URL_TEMPLATE) {
+                        const readUrl = READ_URL_TEMPLATE.replace('__ID__', id);
+                        fetch(readUrl, {
+                            method: 'PATCH',
+                            headers: {
+                                'X-CSRF-TOKEN': CSRF_TOKEN,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            credentials: 'same-origin'
+                        }).finally(function() {
+                            if (url && url !== '#') {
+                                window.location.href = url;
+                            }
+                        });
+                    } else if (url && url !== '#') {
+                        window.location.href = url;
+                    }
                 });
             });
         }
-
-        function loadNotifications() {
-            bellBody.innerHTML = '<div class="bell-empty"><i class="bi bi-arrow-repeat"></i>Loading...</div>';
-            fetch(FETCH_URL, {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF },
-                credentials: 'same-origin',
-            })
-            .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-            .then(function (data) { setBadge(data.count); renderList(data.notifications); })
-            .catch(function (err) {
-                bellBody.innerHTML = '<div class="bell-empty" style="color:#DC3545;"><i class="bi bi-exclamation-circle"></i>Could not load notifications.</div>';
-                console.error('Bell error:', err);
+        
+        // Render notifications with highlight for newest notification
+        function renderNotificationsWithHighlight(notifications, highlightId = null) {
+            if (!bellBody) return;
+            
+            if (!notifications || notifications.length === 0) {
+                bellBody.innerHTML = `
+                    <div class="bell-empty">
+                        <i class="bi bi-bell-slash"></i>
+                        No notifications yet.
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            notifications.forEach(function(notif) {
+                const unreadClass = notif.read ? '' : 'unread';
+                // Apply yellow highlight with 50% opacity to the newest notification
+                const isHighlighted = (highlightId && notif.id === highlightId);
+                const highlightStyle = isHighlighted ? 'background: rgba(255, 241, 182, 1.0); border-left: 4px solid #F5C518;' : '';
+                
+                html += `
+                    <div class="notif-item ${unreadClass}" data-id="${escapeHtml(notif.id)}" data-url="${escapeHtml(notif.url)}" style="cursor:pointer; padding:12px 14px; border-bottom:1px solid #f0f0f0; ${highlightStyle}">
+                        <div style="flex:1;">
+                            <div class="notif-msg" style="font-size:0.85rem; color:#1a1a1a; line-height:1.4;">${escapeHtml(notif.message)}</div>
+                            <div class="notif-time" style="font-size:0.72rem; color:#999; margin-top:4px;">${escapeHtml(notif.time)}</div>
+                        </div>
+                        ${isHighlighted ? '<div style="margin-left:8px;"><i class="bi bi-star-fill" style="color:#F5C518; font-size:0.7rem;"></i></div>' : ''}
+                    </div>
+                `;
+            });
+            
+            bellBody.innerHTML = html;
+            
+            // Add click handlers to mark as read and redirect
+            document.querySelectorAll('.notif-item').forEach(function(item) {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const id = this.dataset.id;
+                    const url = this.dataset.url;
+                    
+                    if (id && READ_URL_TEMPLATE) {
+                        const readUrl = READ_URL_TEMPLATE.replace('__ID__', id);
+                        fetch(readUrl, {
+                            method: 'PATCH',
+                            headers: {
+                                'X-CSRF-TOKEN': CSRF_TOKEN,
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            credentials: 'same-origin'
+                        }).finally(function() {
+                            if (url && url !== '#') {
+                                window.location.href = url;
+                            }
+                        });
+                    } else if (url && url !== '#') {
+                        window.location.href = url;
+                    }
+                });
             });
         }
-
-        bellBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (bellDropdown.style.display === 'block') {
-                bellDropdown.style.display = 'none';
-            } else {
-                bellDropdown.style.display = 'block';
-                loadNotifications();
-            }
-        });
-
-        document.addEventListener('click', function (e) {
-            if (!bellBtn.contains(e.target) && !bellDropdown.contains(e.target)) {
-                bellDropdown.style.display = 'none';
-            }
-        });
-
-        markAllBtn.addEventListener('click', function () {
+        
+        // Fetch notifications from server (regular polling)
+        function fetchAndUpdateNotifications(shouldAutoOpen = false) {
+            fetch(FETCH_URL, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                credentials: 'same-origin'
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function(data) {
+                const newUnreadCount = data.unread || 0;
+                const hasNewNotifications = newUnreadCount > lastNotificationCount;
+                
+                console.log(`🔔 Poll: Unread=${newUnreadCount}, Last=${lastNotificationCount}, New=${hasNewNotifications}, AutoOpen=${shouldAutoOpen}`);
+                
+                updateBadge(newUnreadCount);
+                
+                // Auto-open if new notifications detected (regular polling)
+                if (shouldAutoOpen && hasNewNotifications && !hasAutoOpenedThisSession) {
+                    console.log('🔔 Auto-opening dropdown from poll!');
+                    hasAutoOpenedThisSession = true;
+                    renderNotifications(data.notifications || []);
+                    if (bellDropdown) {
+                        bellDropdown.style.display = 'block';
+                        setTimeout(function() {
+                            if (bellDropdown) bellDropdown.style.display = 'none';
+                        }, 8000);
+                    }
+                }
+                
+                lastNotificationCount = newUnreadCount;
+            })
+            .catch(function(err) {
+                console.error('❌ Failed to fetch notifications:', err);
+            });
+        }
+        
+        // Load and show notifications when bell clicked
+        function loadAndShowNotifications() {
+            fetch(FETCH_URL, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                credentials: 'same-origin'
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                renderNotifications(data.notifications || []);
+                updateBadge(data.unread || 0);
+            })
+            .catch(function(err) {
+                console.error('Failed to load notifications:', err);
+                if (bellBody) {
+                    bellBody.innerHTML = '<div class="bell-empty">Could not load notifications.</div>';
+                }
+            });
+        }
+        
+        // Mark all as read
+        function markAllAsRead() {
             fetch(READ_ALL_URL, {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin',
-            }).then(function () {
-                setBadge(0);
-                bellBody.innerHTML = '<div class="bell-empty"><i class="bi bi-bell-slash"></i>No new notifications</div>';
+                headers: {
+                    'X-CSRF-TOKEN': CSRF_TOKEN,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(function() {
+                updateBadge(0);
+                if (bellDropdown && bellDropdown.style.display === 'block') {
+                    loadAndShowNotifications();
+                }
+            })
+            .catch(function(err) {
+                console.error('Failed to mark all as read:', err);
             });
+        }
+        
+        // Event: Bell button click
+        if (bellBtn) {
+            bellBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (bellDropdown.style.display === 'block') {
+                    bellDropdown.style.display = 'none';
+                } else {
+                    loadAndShowNotifications();
+                    bellDropdown.style.display = 'block';
+                }
+            });
+        }
+        
+        // Event: Mark all button
+        if (markAllBtn) {
+            markAllBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                markAllAsRead();
+            });
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (bellBtn && !bellBtn.contains(e.target) && bellDropdown && !bellDropdown.contains(e.target)) {
+                bellDropdown.style.display = 'none';
+            }
         });
-
-        // Auto-load badge count on page load
-        fetch(FETCH_URL, {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF },
-            credentials: 'same-origin',
-        }).then(function (res) { return res.json(); }).then(function (data) { setBadge(data.count); }).catch(function () {});
-
+        
+        // Initial load - get badge count
+        fetchAndUpdateNotifications(false);
+        
+        // Check for immediate notification from form submission
+        const shouldCheck = document.querySelector('meta[name="check-notifications"]')?.content === 'true';
+        console.log('🔔 Immediate notification check on page load:', shouldCheck);
+        
+        if (shouldCheck) {
+            console.log('🔔 New notification detected! Fetching and opening dropdown immediately...');
+            
+            // Wait 500ms for the notification to be saved to database
+            setTimeout(function() {
+                // Force fetch and show notifications immediately
+                fetch(FETCH_URL, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': CSRF_TOKEN
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(function(res) { 
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json(); 
+                })
+                .then(function(data) {
+                    console.log('📦 Notifications fetched for auto-open:', data.notifications?.length, 'notifications');
+                    console.log('📊 Unread count:', data.unread);
+                    
+                    if (data.notifications && data.notifications.length > 0) {
+                        // Get the ID of the most recent notification (first one in the array)
+                        const newestNotificationId = data.notifications[0]?.id;
+                        console.log('✨ Newest notification ID:', newestNotificationId);
+                        
+                        // Render notifications with highlight for the newest one
+                        renderNotificationsWithHighlight(data.notifications, newestNotificationId);
+                        updateBadge(data.unread || 0);
+                        
+                        if (bellDropdown) {
+                            bellDropdown.style.display = 'block';
+                            console.log('🔔✅ Dropdown opened automatically with highlighted newest notification!');
+                            
+                            // Auto-close after 8 seconds
+                            setTimeout(function() {
+                                if (bellDropdown) bellDropdown.style.display = 'none';
+                                console.log('🔔 Dropdown auto-closed after 8 seconds');
+                            }, 8000);
+                        }
+                        
+                        // Update state to prevent duplicate auto-open
+                        lastNotificationCount = data.unread || 0;
+                        hasAutoOpenedThisSession = true;
+                    } else {
+                        console.log('⚠️ No notifications found, but flag was set');
+                    }
+                })
+                .catch(function(err) {
+                    console.error('❌ Failed to fetch notifications for auto-open:', err);
+                });
+            }, 500);
+            
+            // Clear the flag so it doesn't trigger again on next refresh
+            const meta = document.querySelector('meta[name="check-notifications"]');
+            if (meta) {
+                meta.content = 'false';
+                console.log('🔔 Cleared check-notifications flag');
+            }
+        }
+        
+        // Poll for new notifications every 10 seconds
+        setInterval(function() {
+            console.log('🔍 Polling for new notifications...');
+            fetchAndUpdateNotifications(true);
+        }, 10000);
     })();
     </script>
 

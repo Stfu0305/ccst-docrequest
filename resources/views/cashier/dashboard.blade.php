@@ -15,38 +15,13 @@
         </a>
     </div>
 
-    {{-- ── 6 Stat Cards ── --}}
+    {{-- Only 3 Stat Cards (removed individual method cards) --}}
     <div class="stat-grid">
-
         <div class="stat-card stat-blue">
             <div class="stat-icon"><i class="bi bi-credit-card-2-front"></i></div>
             <div class="stat-info">
                 <div class="stat-value">{{ $totalPending }}</div>
                 <div class="stat-label">Total Pending</div>
-            </div>
-        </div>
-
-        <div class="stat-card stat-green">
-            <div class="stat-icon"><i class="bi bi-phone"></i></div>
-            <div class="stat-info">
-                <div class="stat-value">{{ $gcashPending }}</div>
-                <div class="stat-label">GCash Pending</div>
-            </div>
-        </div>
-
-        <div class="stat-card stat-teal">
-            <div class="stat-icon"><i class="bi bi-bank"></i></div>
-            <div class="stat-info">
-                <div class="stat-value">{{ $bankPending }}</div>
-                <div class="stat-label">Bank Transfer Pending</div>
-            </div>
-        </div>
-
-        <div class="stat-card stat-yellow">
-            <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
-            <div class="stat-info">
-                <div class="stat-value">{{ $cashPending }}</div>
-                <div class="stat-label">Cash Pending</div>
             </div>
         </div>
 
@@ -65,69 +40,64 @@
                 <div class="stat-label">Rejected Today</div>
             </div>
         </div>
-
     </div>
 
-    {{-- ── Recent Pending Payments Table ── --}}
+    {{-- Recent Pending Payments Table --}}
     <div class="ccst-card">
         <div class="ccst-card-header">
             <i class="bi bi-clock-history me-1"></i> Recent Pending Payments
         </div>
         <div class="ccst-card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="pendingTable">
-                    <thead style="background:#f8f9fa; font-size:0.8rem;">
-                        <tr>
-                            <th class="px-3 py-2">Reference No.</th>
-                            <th class="px-3 py-2">Student</th>
-                            <th class="px-3 py-2">Method</th>
-                            <th class="px-3 py-2">Amount</th>
-                            <th class="px-3 py-2">Submitted</th>
-                            <th class="px-3 py-2">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody style="font-size:0.83rem;">
-                        @forelse($recentPending as $request)
-                        <tr>
-                            <td class="px-3 py-2">
-                                <span style="font-weight:600; color:#1B6B3A;">
-                                    {{ $request->reference_number }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2">{{ $request->full_name }}</td>
-                            <td class="px-3 py-2">
-                                @php
-                                    $methodLabels = [
-                                        'gcash'         => ['GCash',         'text-success'],
-                                        'bank_transfer' => ['Bank Transfer',  'text-primary'],
-                                        'cash'          => ['Cash',           'text-warning'],
-                                    ];
-                                    [$label, $cls] = $methodLabels[$request->payment_method] ?? ['—', ''];
-                                @endphp
-                                <span class="fw-600 {{ $cls }}">{{ $label }}</span>
-                            </td>
-                            <td class="px-3 py-2">₱{{ number_format($request->total_fee, 2) }}</td>
-                            <td class="px-3 py-2 text-muted">
-                                {{ $request->updated_at->format('M d, Y') }}
-                            </td>
-                            <td class="px-3 py-2">
-                                <a href="{{ route('cashier.payments.show', $request->id) }}"
-                                   class="btn btn-sm btn-primary py-0 px-2"
-                                   style="font-size:0.75rem;">
-                                    Review
-                                </a>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4" style="font-size:0.85rem;">
-                                <i class="bi bi-check-circle me-2 text-success"></i>
-                                No pending payments at this time.
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                <div class="table-scroll-body">
+                    <table class="pending-table">
+                        <thead style="text-align: center;">
+                            <tr >
+                                <th style="width: 18% ; text-align: center;">Reference No.</th>
+                                <th style="width: 25%; text-align: center;">Student</th>
+                                <th style="width: 12%; text-align: center;">Method</th>
+                                <th style="width: 12%; text-align: center;">Amount</th>
+                                <th style="width: 15%; text-align: center;">Submitted</th>
+                                <th style="width: 15%; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody style="text-align: center;">
+                            @forelse($recentPending as $request)
+                            <tr>
+                                <td style="width: 18%">
+                                    <span class="ref-number">{{ $request->reference_number }}</span>
+                                </td>
+                                <td style="width: 25%">{{ $request->full_name }}</td>
+                                <td style="width: 15%; text-align: center;">
+                                    @php
+                                        $methodLabels = [
+                                            'gcash'         => ['GCash', 'method-gcash'],
+                                            'bank_transfer' => ['Bank Transfer', 'method-bank'],
+                                            'cash'          => ['Cash', 'method-cash'],
+                                        ];
+                                        [$label, $methodClass] = $methodLabels[$request->payment_method] ?? ['—', ''];
+                                    @endphp
+                                    <span class="method-badge {{ $methodClass }}">{{ $label }}</span>
+                                </td>
+                                <td style="width: 12%">₱{{ number_format($request->total_fee, 2) }}</td>
+                                <td style="width: 15%" class="text-muted">{{ $request->updated_at->format('M d, Y') }}</td>
+                                <td style="width: 15%">
+                                    <a href="{{ route('cashier.payments.show', $request->id) }}" class="action-btn">
+                                        <i class="bi bi-eye"></i> Review
+                                    </a>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="bi bi-check-circle me-2 text-success"></i>
+                                    No pending payments at this time.
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -137,14 +107,14 @@
 {{-- RIGHT PANEL --}}
 @section('right-panel')
 
-    {{-- Date + Time card — glassmorphism, no green background --}}
+    {{-- Date + Time card --}}
     <div class="rp-date-card">
         <div class="rp-date-day">{{ now()->format('d') }}</div>
         <div class="rp-date-month">{{ now()->format('F Y') }}</div>
         <div class="rp-date-time" id="live-time">--:-- --</div>
     </div>
 
-    {{-- Today's Summary --}}
+    {{-- Today's Summary (removed Verified row) --}}
     <div class="ccst-card mb-0">
         <div class="ccst-card-header blue">Today's Summary</div>
         <div class="ccst-card-body p-0">
@@ -156,13 +126,9 @@
                 <span><span class="rp-icon-circle"><i class="bi bi-bank"></i></span> Bank</span>
                 <strong>{{ $bankPending }}</strong>
             </div>
-            <div class="rp-stat-row">
+            <div class="rp-stat-row" style="border-bottom:none;">
                 <span><span class="rp-icon-circle"><i class="bi bi-cash"></i></span> Cash</span>
                 <strong>{{ $cashPending }}</strong>
-            </div>
-            <div class="rp-stat-row" style="border-bottom:none;">
-                <span><span class="rp-icon-circle"><i class="bi bi-check-circle"></i></span> Verified</span>
-                <strong style="color:white;">{{ $verifiedToday }}</strong>
             </div>
         </div>
     </div>
@@ -232,11 +198,11 @@
 
     .btn-view-all:hover { background: #0D7FBF; color: white; }
 
-    /* ── Stat cards grid ── */
+    /* ── Stat cards grid - Only 3 cards now ── */
     .stat-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 14px;
+        gap: 16px;
         margin-bottom: 24px;
     }
 
@@ -270,13 +236,105 @@
     }
 
     .stat-blue    { background: linear-gradient(135deg, #1A9FE0, #0D7FBF); }
-    .stat-green   { background: linear-gradient(135deg, #2E8B57, #1B6B3A); }
-    .stat-teal    { background: linear-gradient(135deg, #20B2AA, #148F8A); }
-    .stat-yellow  { background: linear-gradient(135deg, #F5A623, #E08A00); }
     .stat-success { background: linear-gradient(135deg, #28A745, #1A7430); }
     .stat-red     { background: linear-gradient(135deg, #DC3545, #A71D2A); }
 
-    /* ── Right panel ── */
+    /* ── Recent Pending Payments Table ── */
+    .ccst-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 0;
+    }
+
+    .ccst-card-header {
+        background: #1B6B3A;
+        color: white;
+        font-size: 0.86rem;
+        font-weight: 700;
+        padding: 12px 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    .table-scroll-body {
+        max-height: 380px;
+        overflow-y: auto;
+    }
+
+    .pending-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .pending-table thead {
+        position: sticky;
+        top: 0;
+        background: #F0F7F0;
+        z-index: 10;
+    }
+
+    .pending-table th {
+        background: #F0F7F0;
+        padding: 12px 16px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #1B6B3A;
+        text-align: left;
+        border-bottom: 1px solid #D0DDD0;
+    }
+
+    .pending-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.8rem;
+        vertical-align: middle;
+    }
+
+    .pending-table tr:hover {
+        background: #f8fafb;
+    }
+
+    .ref-number {
+        font-weight: 600;
+        color: #1B6B3A;
+    }
+
+    .method-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .method-gcash { background: #E8F4FD; color: #0969A2; }
+    .method-bank { background: #FFF3CD; color: #856404; }
+    .method-cash { background: #D4EDDA; color: #155724; }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #1A9FE0;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .action-btn:hover {
+        background: #0D7FBF;
+        color: white;
+    }
+
+    /* ── Right panel styles ── */
     .rp-stat-row {
         display: flex;
         justify-content: space-between;
@@ -302,7 +360,7 @@
         height: 20px;
         min-width: 20px;
         border-radius: 50%;
-        background: #F5C518; /* yellow — matches HOW TO VERIFY header */
+        background: #F5C518;
         color: #1A1A1A;
         font-size: 0.68rem;
         font-weight: 700;
@@ -312,41 +370,40 @@
         margin-top: 1px;
     }
 
-    /* ── Date card (right panel) ── */
     .rp-date-card {
-        background: rgba(255,255,255,0.18);
+        /* background: rgba(255,255,255,0.18); */
         border-radius: 10px;
         padding: 16px;
         text-align: center;
         color: white;
         backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.3);
-        margin-bottom: 0;
+        /* -webkit-backdrop-filter: blur(8px); */
+        /* border: 1px solid rgba(255,255,255,0.3); */
+        margin-bottom: 10px;
     }
 
     .rp-date-day {
-        font-size: 2.8rem;
+        font-size: 3.25rem;
         font-weight: 700;
         line-height: 1;
         text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        margin-top: 20px;
     }
 
     .rp-date-month {
-        font-size: 0.85rem;
+        font-size: 1.25rem;
         opacity: 0.85;
         margin-top: 2px;
     }
 
     .rp-date-time {
-        font-size: 1rem;
+        font-size: 1.50rem;
         font-weight: 600;
         margin-top: 6px;
         opacity: 0.9;
         letter-spacing: 1px;
     }
 
-    /* Blue circle icon for Today's Summary */
     .rp-icon-circle {
         display: inline-flex;
         align-items: center;
@@ -362,8 +419,47 @@
         vertical-align: middle;
         flex-shrink: 0;
     }
-</style>
 
+    /* Ensure no page scroll, only table scrolls */
+    .main-content {
+        overflow-y: hidden !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main-content > .dash-heading-row {
+        flex-shrink: 0;
+    }
+
+    .main-content > .stat-grid {
+        flex-shrink: 0;
+    }
+
+    .main-content > .ccst-card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        margin-bottom: 0;
+    }
+
+    .main-content > .ccst-card .ccst-card-body {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .main-content > .ccst-card .table-scroll-body {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    /* Bottom margin for table to match top margin */
+    .main-content {
+        padding-bottom: 28px;
+    }
+</style>
 @endpush
 
 @push('scripts')

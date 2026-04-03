@@ -150,6 +150,10 @@ Route::middleware(['auth', 'role:cashier'])->prefix('cashier')->name('cashier.')
     // ── Dashboard & Account ──────────────────────────────────────────────────
     Route::get('/dashboard', [CashierDashboard::class, 'index'])->name('dashboard');
     Route::get('/account', [CashierDashboard::class, 'account'])->name('account');
+    Route::patch('/account/profile', [CashierDashboard::class, 'updateProfile'])->name('account.updateProfile');
+    Route::patch('/account/password', [CashierDashboard::class, 'updatePassword'])->name('account.updatePassword');
+    Route::get('/account/photo', [CashierDashboard::class, 'servePhoto'])->name('account.photo');
+    Route::post('/account/photo', [CashierDashboard::class, 'updatePhoto'])->name('account.updatePhoto');
 
     // ── Payment Verification ─────────────────────────────────────────────────
     Route::controller(PaymentVerificationController::class)->group(function() {
@@ -158,6 +162,7 @@ Route::middleware(['auth', 'role:cashier'])->prefix('cashier')->name('cashier.')
         Route::patch('/payments/{id}/verify', 'verify')->name('payments.verify');
         Route::patch('/payments/{id}/reject', 'reject')->name('payments.reject');
         Route::patch('/payments/{id}/mark-cash-paid', 'markCashPaid')->name('payments.markCashPaid');
+        Route::get('/payments/{id}/proof', [PaymentVerificationController::class, 'serveProof'])->name('payments.proof');
     });
 
     // ── Receipts ─────────────────────────────────────────────────────────────

@@ -9,15 +9,12 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * $fillable lists every column we allow to be mass-assigned.
-     * Mass assignment is when you do User::create($request->all()) — Laravel blocks
-     * any column NOT listed here, protecting against users injecting extra fields.
-     */
     protected $fillable = [
+        'first_name',      // Add this
+        'middle_name',     // Add this
+        'last_name',       // Add this
         'name',
         'email',
         'password',
@@ -31,20 +28,11 @@ class User extends Authenticatable
         'profile_photo',
     ];
 
-    /**
-     * $hidden hides these columns when you convert a User to JSON or an array.
-     * This prevents passwords and tokens from leaking into API responses or logs.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * $casts tells Laravel how to automatically convert column values.
-     * 'email_verified_at' becomes a Carbon date object (so you can do ->format('Y-m-d')).
-     * 'password' => 'hashed' means Laravel auto-hashes when you set the password.
-     */
     protected function casts(): array
     {
         return [
@@ -53,36 +41,43 @@ class User extends Authenticatable
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // RELATIONSHIPS
-    // -------------------------------------------------------------------------
+    /**
+     * Get the user's full name
+     */
+    public function getFullNameAttribute(): string
+    {
+        $middle = $this->middle_name ? ' ' . $this->middle_name . ' ' : ' ';
+        return $this->first_name . $middle . $this->last_name;
+    }
 
     /**
-     * A student user can have many document requests.
-     * Usage: $user->documentRequests — returns a collection of DocumentRequest models.
+     * Auto-generate name field from first and last name
      */
+    public static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($user) {
+            $middle = $user->middle_name ? ' ' . $user->middle_name . ' ' : ' ';
+            $user->name = $user->first_name . $middle . $user->last_name;
+        });
+        
+        static::updating(function ($user) {
+            $middle = $user->middle_name ? ' ' . $user->middle_name . ' ' : ' ';
+            $user->name = $user->first_name . $middle . $user->last_name;
+        });
+    }
+
     public function documentRequests()
     {
         return $this->hasMany(DocumentRequest::class);
     }
 
-    /**
-     * A student user can have many appointments.
-     * Usage: $user->appointments
-     */
     public function appointments()
     {
         return $this->hasMany(Appointment::class);
     }
 
-    // -------------------------------------------------------------------------
-    // HELPER METHODS
-    // -------------------------------------------------------------------------
-
-    /**
-     * Quick role-check helpers — use these in Blade and controllers.
-     * Example in Blade: @if(auth()->user()->isStudent())
-     */
     public function isStudent(): bool
     {
         return $this->role === 'student';

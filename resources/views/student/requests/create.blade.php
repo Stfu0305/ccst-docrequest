@@ -42,29 +42,24 @@
                 </div>
             </div>
 
-            {{-- Row 2: Surname, First Name, Middle Initial (display only — stored as full_name) --}}
-            @php
-                $nameParts  = explode(' ', auth()->user()->name);
-                $firstName  = count($nameParts) > 1 ? $nameParts[0] : '';
-                $lastName   = count($nameParts) > 1 ? $nameParts[count($nameParts)-1] : $nameParts[0];
-                $middleInit = count($nameParts) > 2 ? implode(' ', array_slice($nameParts, 1, -1)) : '';
-            @endphp
+            {{-- Row 2: First Name, Middle Name, Last Name (auto-filled from user profile) --}}
             <div class="form-row-3">
                 <div class="form-field">
-                    <label>Surname *</label>
-                    <input type="text" value="{{ $lastName }}" readonly class="field-readonly">
-                </div>
-                <div class="form-field">
                     <label>First Name *</label>
-                    <input type="text" value="{{ $firstName }}" readonly class="field-readonly">
+                    <input type="text" value="{{ auth()->user()->first_name }}" readonly class="field-readonly">
+                    <input type="hidden" name="first_name" value="{{ auth()->user()->first_name }}">
                 </div>
                 <div class="form-field">
-                    <label>Middle Initial *</label>
-                    <input type="text" value="{{ $middleInit }}" readonly class="field-readonly">
+                    <label>Middle Name</label>
+                    <input type="text" value="{{ auth()->user()->middle_name ?? '—' }}" readonly class="field-readonly">
+                    <input type="hidden" name="middle_name" value="{{ auth()->user()->middle_name }}">
+                </div>
+                <div class="form-field">
+                    <label>Last Name *</label>
+                    <input type="text" value="{{ auth()->user()->last_name }}" readonly class="field-readonly">
+                    <input type="hidden" name="last_name" value="{{ auth()->user()->last_name }}">
                 </div>
             </div>
-            {{-- Hidden full_name for actual submission --}}
-            <input type="hidden" name="full_name" value="{{ auth()->user()->name }}">
 
             {{-- Row 3: Course/Program read-only --}}
             <div class="form-row-1">
@@ -75,21 +70,17 @@
                 </div>
             </div>
 
-            {{-- Row 4: Year, Section --}}
+            {{-- Row 4: Year & Section (auto-filled, read-only) --}}
             <div class="form-row-short">
                 <div class="form-field">
                     <label>Year *</label>
-                    <select name="year_level" id="yearLevel" class="field-select" required onchange="updateSection()">
-                        <option value="" disabled selected>—</option>
-                        <option value="Grade 11" {{ auth()->user()->grade_level === 'Grade 11' ? 'selected' : '' }}>Grade 11</option>
-                        <option value="Grade 12" {{ auth()->user()->grade_level === 'Grade 12' ? 'selected' : '' }}>Grade 12</option>
-                    </select>
+                    <input type="text" value="{{ auth()->user()->grade_level }}" readonly class="field-readonly">
+                    <input type="hidden" name="year_level" value="{{ auth()->user()->grade_level }}">
                 </div>
                 <div class="form-field">
                     <label>Section *</label>
-                    <select name="section" id="sectionField" class="field-select" required>
-                        <option value="">— select section —</option>
-                    </select>
+                    <input type="text" value="{{ auth()->user()->section }}" readonly class="field-readonly">
+                    <input type="hidden" name="section" value="{{ auth()->user()->section }}">
                 </div>
             </div>
 

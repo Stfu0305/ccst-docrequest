@@ -32,7 +32,6 @@
             z-index: 1;
         }
 
-        /* Full-page background */
         .page-bg {
             position: fixed;
             inset: 0;
@@ -58,7 +57,6 @@
             );
         }
 
-        /* Left panel */
         .left-panel {
             width: 50%;
             flex-shrink: 0;
@@ -71,7 +69,6 @@
             padding: 40px 48px;
             overflow: hidden;
             animation: fadeUp 0.5s ease both;
-
         }
 
         .left-content {
@@ -110,14 +107,11 @@
             max-width: 380px;
         }
 
-        /* ══════════════════════════════════════
-           RIGHT PANEL — curved left edge, light bg
-        ══════════════════════════════════════ */
         .right-panel {
-            position: fixed;   /* anchored to right corner — shrinks/grows from right edge */
+            position: fixed;
             top: 0;
             right: 0;
-            width: 50%;        /* change ONLY this value */
+            width: 50%;
             height: 100vh;
             background: var(--panel-bg);
             border-radius: 75px 0 0 0;
@@ -130,11 +124,9 @@
             overflow-y: auto;
         }
 
-
-        /* Curve image — attached to left edge of right panel */
         .curve-img {
-            position: fixed;  /* now relative to the full page, not the panel */
-            left: 628px;      /* ← adjust this freely — pixels from left edge of page */
+            position: fixed;
+            left: 628px;
             top: 0;
             height: 100vh;
             width: auto;
@@ -142,10 +134,9 @@
             z-index: 10;
         }
 
-        /* Register card */
         .register-card {
             width: 100%;
-            max-width: 442px;
+            max-width: 500px;
             background: var(--white);
             border-radius: 16px;
             overflow: hidden;
@@ -179,7 +170,13 @@
             margin-bottom: 15px;
         }
 
-        /* Two-column grid for short fields */
+        /* Three columns for name fields */
+        .name-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0 12px;
+        }
+
         .fields-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -268,7 +265,6 @@
             font-weight: 500;
         }
 
-        /* Register button */
         .btn-register {
             width: 100%;
             padding: 9px;
@@ -292,7 +288,6 @@
 
         .btn-register:active { transform: translateY(0); }
 
-        /* Below card */
         .below-card {
             margin-top: 14px;
             text-align: center;
@@ -308,7 +303,6 @@
 
         .below-card a:hover { text-decoration: underline; }
 
-        /* Footer */
         .right-footer {
             position: absolute;
             bottom: 16px;
@@ -336,69 +330,86 @@
             .right-footer { position: static; margin-top: 20px; }
             .fields-grid { grid-template-columns: 1fr; }
             .field-full { grid-column: 1; }
+            .name-grid { grid-template-columns: 1fr; gap: 10px; }
         }
     </style>
 </head>
 <body>
 
-    {{-- Full-page background --}}
     <div class="page-bg">
         <div class="bg-img" style="background-image:url({{ json_encode(asset('images/ccst-building.jpeg')) }})"></div>
         <div class="bg-overlay"></div>
     </div>
 
-    {{-- LEFT PANEL --}}
     <div class="left-panel">
         <div class="left-content">
-            <img class="ccst-logo"
-                 src="{{ asset('images/ccst-logo.png') }}"
-                 alt="CCST Logo"
-                 onerror="this.style.display='none'">
+            <img class="ccst-logo" src="{{ asset('images/ccst-logo.png') }}" alt="CCST Logo" onerror="this.style.display='none'">
             <h1>Online Document Request<br>and Tracking System</h1>
-            <p>Quick, easy and secure: Clark College of Science and Technology's
-               Online Document Request and Tracking System for SHS Registrar</p>
+            <p>Quick, easy and secure: Clark College of Science and Technology's Online Document Request and Tracking System for SHS Registrar</p>
         </div>
     </div>
 
+    <img class="curve-img" src="{{ asset('images/right-panel-curve.png') }}" alt="">
 
-{{-- Curve image — freely positioned anywhere on page --}}
-<img class="curve-img" src="{{ asset('images/right-panel-curve.png') }}" alt="">
-
-{{-- ══ RIGHT PANEL ══ --}}
-<div class="right-panel">
-
+    <div class="right-panel">
         <div class="register-card">
-
             <div class="card-header-strip">
                 <h2>Create an Account</h2>
             </div>
-
             <div class="card-body-inner">
-
                 <p class="card-subtitle">Fill in your details to register as a student</p>
 
                 <form method="POST" action="{{ route('register') }}">
                     @csrf
 
-                    <div class="fields-grid">
-
-                        {{-- Full Name --}}
-                        <div class="field-group field-full">
-                            <label for="name">Full Name</label>
+                    {{-- Name Fields - 3 columns --}}
+                    <div class="name-grid">
+                        <div class="field-group">
+                            <label for="first_name">First Name</label>
                             <div class="input-wrap">
                                 <i class="bi bi-person field-icon"></i>
-                                <input type="text" id="name" name="name"
-                                    value="{{ old('name') }}"
-                                    placeholder="Enter your full name"
-                                    autocomplete="name" autofocus
-                                    class="{{ $errors->has('name') ? 'is-invalid' : '' }}"
+                                <input type="text" id="first_name" name="first_name"
+                                    value="{{ old('first_name') }}"
+                                    placeholder="e.g. Maria"
+                                    class="{{ $errors->has('first_name') ? 'is-invalid' : '' }}"
                                     required>
                             </div>
-                            @error('name')
+                            @error('first_name')
                                 <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
                             @enderror
                         </div>
 
+                        <div class="field-group">
+                            <label for="middle_name">Middle Name</label>
+                            <div class="input-wrap">
+                                <i class="bi bi-person-badge field-icon"></i>
+                                <input type="text" id="middle_name" name="middle_name"
+                                    value="{{ old('middle_name') }}"
+                                    placeholder="e.g. Santos (if none, leave blank)"
+                                    class="{{ $errors->has('middle_name') ? 'is-invalid' : '' }}">
+                            </div>
+                            @error('middle_name')
+                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="field-group">
+                            <label for="last_name">Last Name</label>
+                            <div class="input-wrap">
+                                <i class="bi bi-person-circle field-icon"></i>
+                                <input type="text" id="last_name" name="last_name"
+                                    value="{{ old('last_name') }}"
+                                    placeholder="e.g. Dela Cruz"
+                                    class="{{ $errors->has('last_name') ? 'is-invalid' : '' }}"
+                                    required>
+                            </div>
+                            @error('last_name')
+                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="fields-grid">
                         {{-- Student Number --}}
                         <div class="field-group">
                             <label for="student_number">Student Number</label>
@@ -406,7 +417,7 @@
                                 <i class="bi bi-hash field-icon"></i>
                                 <input type="text" id="student_number" name="student_number"
                                     value="{{ old('student_number') }}"
-                                    placeholder="e.g. 2024-00001"
+                                    placeholder="e.g. 05-8959"
                                     class="{{ $errors->has('student_number') ? 'is-invalid' : '' }}"
                                     required>
                             </div>
@@ -488,16 +499,16 @@
                             @enderror
                         </div>
 
-                        {{-- Section --}}
+                        {{-- Section - Dynamic Dropdown --}}
                         <div class="field-group field-full">
                             <label for="section">Section</label>
                             <div class="input-wrap">
                                 <i class="bi bi-people field-icon"></i>
-                                <input type="text" id="section" name="section"
-                                    value="{{ old('section') }}"
-                                    placeholder="e.g. Diligence"
+                                <select id="section" name="section"
                                     class="{{ $errors->has('section') ? 'is-invalid' : '' }}"
                                     required>
+                                    <option value="">Select strand and grade level first</option>
+                                </select>
                             </div>
                             @error('section')
                                 <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
@@ -537,17 +548,12 @@
                                 </button>
                             </div>
                         </div>
-
                     </div>
-                    {{-- end fields-grid --}}
 
                     <button type="submit" class="btn-register">Create Account</button>
-
                 </form>
-
             </div>
         </div>
-        {{-- end register-card --}}
 
         <div class="below-card">
             Already have an account? <a href="{{ route('login') }}">Sign in here</a>
@@ -558,13 +564,12 @@
             &copy; Copyright 2026 Clark College of Science and Technology<br>
             Document Request System
         </div>
-
     </div>
 
     <script>
         function togglePw(inputId, iconId) {
             const input = document.getElementById(inputId);
-            const icon  = document.getElementById(iconId);
+            const icon = document.getElementById(iconId);
             if (input.type === 'password') {
                 input.type = 'text';
                 icon.className = 'bi bi-eye-slash';
@@ -573,7 +578,45 @@
                 icon.className = 'bi bi-eye';
             }
         }
-    </script>
 
+        // Dynamic section dropdown based on strand and grade level
+        const strandSelect = document.getElementById('strand');
+        const gradeLevelSelect = document.getElementById('grade_level');
+        const sectionSelect = document.getElementById('section');
+
+        function generateSections() {
+            const strand = strandSelect.value;
+            const gradeLevel = gradeLevelSelect.value;
+            
+            if (!strand || !gradeLevel) {
+                sectionSelect.innerHTML = '<option value="">Select strand and grade level first</option>';
+                return;
+            }
+            
+            // Extract grade number (11 or 12)
+            const gradeNum = gradeLevel === 'Grade 11' ? '11' : '12';
+            
+            // Generate sections A through E
+            const sections = ['A', 'B', 'C', 'D', 'E'];
+            let options = `<option value="" disabled selected>Select section</option>`;
+            
+            sections.forEach(letter => {
+                const sectionValue = `${strand}-${gradeNum}${letter}`;
+                const oldValue = "{{ old('section') }}";
+                const selected = oldValue === sectionValue ? 'selected' : '';
+                options += `<option value="${sectionValue}" ${selected}>${sectionValue}</option>`;
+            });
+            
+            sectionSelect.innerHTML = options;
+        }
+
+        strandSelect.addEventListener('change', generateSections);
+        gradeLevelSelect.addEventListener('change', generateSections);
+        
+        // Initialize sections if values are already selected (e.g., after form error)
+        if (strandSelect.value && gradeLevelSelect.value) {
+            generateSections();
+        }
+    </script>
 </body>
 </html>
