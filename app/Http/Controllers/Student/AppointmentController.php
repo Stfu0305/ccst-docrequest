@@ -160,19 +160,24 @@ class AppointmentController extends Controller
             return back()->with('error', 'This appointment cannot be cancelled.');
         }
 
-        // Update status to cancelled
-        $appointment->update(['status' => 'canceled']);
-
+        // Store info for notification
+        $appointmentDate = $appointment->appointment_date;
+        $timeSlotLabel = $appointment->timeSlot->label;
+        $docRequest = $appointment->documentRequest;
+        
+        // Delete the appointment (or set status to cancelled)
+        $appointment->delete(); // This completely removes it so a new one can be created
+        
         // Send notification to student
         $message = 'Your appointment scheduled for ' . 
-                   date('F j, Y', strtotime($appointment->appointment_date)) . 
-                   ' at ' . $appointment->timeSlot->label . 
-                   ' has been cancelled. You can book a new appointment anytime.';
+                date('F j, Y', strtotime($appointmentDate)) . 
+                ' at ' . $timeSlotLabel . 
+                ' has been cancelled. You can book a new appointment anytime.';
         $url = route('student.requests.history');
         $this->sendNotificationToCurrentUser($message, $url);
 
         return redirect()
             ->route('student.requests.history')
-            ->with('success', 'Appointment cancelled successfully.');
+            ->with('success', 'Appointment cancelled successfully. You can book a new appointment.');
     }
 }
