@@ -40,13 +40,15 @@ class PaymentSettingsController extends Controller
 
         // Send notification to cashier
         $message = '✅ Payment settings for ' . ucfirst($setting->method) . ' have been updated.';
-        $url = route('cashier.settings.index');
-        $this->sendNotificationToCurrentUser($message, $url);
+        $this->sendNotificationToCurrentUser($message, route('cashier.settings.index'));
+        
+        // Set session flag for auto-open notification
         session()->flash('check_notifications', true);
 
-        return redirect()
-            ->route('cashier.settings.index')
-            ->with('success', 'Settings updated successfully!');
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
     }
 
     public function toggle($id)
@@ -72,4 +74,51 @@ class PaymentSettingsController extends Controller
             'message' => ucfirst($setting->method) . ' has been ' . $status
         ]);
     }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'method' => 'required|string|in:gcash,bdo,bpi',
+            'account_name' => 'required|string|max:255',
+            'account_number' => 'required|string|max:100',
+            'bank_name' => 'nullable|string|max:255',
+            'branch' => 'nullable|string|max:255',
+        ]);
+
+        $setting = PaymentSetting::create([
+            'method' => $validated['method'],
+            'account_name' => $validated['account_name'],
+            'account_number' => $validated['account_number'],
+            'bank_name' => $validated['bank_name'] ?? null,
+            'branch' => $validated['branch'] ?? null,
+            'is_active' => true,
+            'updated_by' => auth()->id(),
+        ]);
+
+        $message = '✅ New payment method ' . strtoupper($setting->method) . ' has been added.';
+        $this->sendNotificationToCurrentUser($message, route('cashier.settings.index'));
+        session()->flash('check_notifications', true);
+
+        return response()->json(['success' => true, 'setting' => $setting]);
+    }
+
+    public function destroy($id)
+    {
+        $setting = PaymentSetting::findOrFail($id);
+        
+        // Prevent deletion of GCash and Cash (core methods)
+        if (in_array($setting->method, ['gcash', 'cash'])) {
+            return response()->json(['success' => false, 'message' => 'Cannot delete core payment methods (GCash and Cash).']);
+        }
+        
+        $methodName = strtoupper($setting->method);
+        $setting->delete();
+        
+        $message = '❌ Payment method ' . $methodName . ' has been deleted.';
+        $this->sendNotificationToCurrentUser($message, route('cashier.settings.index'));
+        session()->flash('check_notifications', true);
+        
+        return response()->json(['success' => true]);
+    }
+
 }

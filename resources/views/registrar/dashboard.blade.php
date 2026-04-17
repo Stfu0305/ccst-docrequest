@@ -22,23 +22,25 @@
 
         {{-- Announcement Board --}}
         <div class="announce-card">
-            <div class="announce-card-header">Announcement Board</div>
+            <div class="announce-card-header">
+                <i class="bi bi-megaphone-fill"></i> Announcement Board
+            </div>
             <div class="announce-card-body">
                 @if($announcement && $announcement->is_published)
-                    <p class="announce-published-label">Currently Published:</p>
                     <div class="announce-content">{!! nl2br(e($announcement->content)) !!}</div>
                 @else
-                    <p class="announce-published-label">Currently Published:</p>
                     <div class="announce-content text-muted fst-italic">No announcement currently published.</div>
                 @endif
             </div>
             <div class="announce-card-footer">
-                <button class="btn-edit" onclick="openEditModal('announcement', {{ $announcement?->id }}, `{{ addslashes($announcement?->content ?? '') }}`)">
-                    Edit
+                <button type="button" class="btn-edit" onclick="openEditModal({{ $announcement?->id }}, `{{ addslashes($announcement?->content ?? '') }}`)">
+                    <i class="bi bi-pencil"></i> Edit
                 </button>
-                <form method="POST" action="{{ route('registrar.announcements.publish', $announcement?->id) }}" style="display:inline;">
-                    @csrf @method('PATCH')
+                <form method="POST" action="{{ route('registrar.announcements.publish', $announcement?->id) }}" class="d-inline">
+                    @csrf
+                    @method('PATCH')
                     <button type="submit" class="btn-publish">
+                        <i class="bi {{ $announcement?->is_published ? 'bi-eye-slash' : 'bi-eye' }}"></i>
                         {{ $announcement?->is_published ? 'Unpublish' : 'Publish' }}
                     </button>
                 </form>
@@ -47,23 +49,25 @@
 
         {{-- Transaction Days --}}
         <div class="announce-card">
-            <div class="announce-card-header">Transaction Days</div>
+            <div class="announce-card-header">
+                <i class="bi bi-calendar-week-fill"></i> Transaction Days
+            </div>
             <div class="announce-card-body">
                 @if($transactionDay && $transactionDay->is_published)
-                    <p class="announce-published-label">Currently Published:</p>
                     <div class="announce-content">{!! nl2br(e($transactionDay->content)) !!}</div>
                 @else
-                    <p class="announce-published-label">Currently Published:</p>
                     <div class="announce-content text-muted fst-italic">No transaction day changes at this time.</div>
                 @endif
             </div>
             <div class="announce-card-footer">
-                <button class="btn-edit" onclick="openEditModal('transaction_days', {{ $transactionDay?->id }}, `{{ addslashes($transactionDay?->content ?? '') }}`)">
-                    Edit
+                <button type="button" class="btn-edit" onclick="openEditModal({{ $transactionDay?->id }}, `{{ addslashes($transactionDay?->content ?? '') }}`)">
+                    <i class="bi bi-pencil"></i> Edit
                 </button>
-                <form method="POST" action="{{ route('registrar.announcements.publish', $transactionDay?->id) }}" style="display:inline;">
-                    @csrf @method('PATCH')
+                <form method="POST" action="{{ route('registrar.announcements.publish', $transactionDay?->id) }}" class="d-inline">
+                    @csrf
+                    @method('PATCH')
                     <button type="submit" class="btn-publish">
+                        <i class="bi {{ $transactionDay?->is_published ? 'bi-eye-slash' : 'bi-eye' }}"></i>
                         {{ $transactionDay?->is_published ? 'Unpublish' : 'Publish' }}
                     </button>
                 </form>
@@ -72,70 +76,49 @@
 
     </div>
 
-    {{-- ── Edit Announcement Modal ── --}}
-    <div class="modal fade" id="editModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header" style="background:var(--green-dark);color:white;">
-                    <h6 class="modal-title fw-700 mb-0">Edit Announcement</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="editForm" method="POST">
-                    @csrf @method('PATCH')
-                    <div class="modal-body">
-                        <textarea name="content" id="editContent" class="form-control" rows="6"></textarea>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-warning btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
 @endsection
 
 {{-- ── RIGHT PANEL ── --}}
 @section('right-panel')
 
-    {{-- Date card --}}
     <div class="rp-date-card">
         <div class="rp-date-day">{{ now()->format('d') }}</div>
         <div class="rp-date-month">{{ now()->format('F Y') }}</div>
         <div class="rp-date-time" id="live-time">--:-- --</div>
     </div>
 
-    {{-- Request Stats --}}
     <div class="ccst-card mb-0">
-        <div class="ccst-card-header blue">Request Overview</div>
+        <div class="ccst-card-header blue">
+            <i class="bi bi-graph-up me-2"></i> Request Overview
+        </div>
         <div class="ccst-card-body p-0">
             <div class="rp-stat-row">
-                <span><span class="rp-icon-circle"><i class="bi bi-folder2"></i></span> Total Requests</span>
+                <span><i class="bi bi-folder2 me-2"></i> Total Requests</span>
                 <strong>{{ $totalRequests }}</strong>
             </div>
             <div class="rp-stat-row">
-                <span><span class="rp-icon-circle"><i class="bi bi-gear"></i></span> Processing</span>
+                <span><i class="bi bi-gear me-2"></i> Processing</span>
                 <strong>{{ $processing }}</strong>
             </div>
             <div class="rp-stat-row">
-                <span><span class="rp-icon-circle"><i class="bi bi-box-seam"></i></span> Ready for Pickup</span>
+                <span><i class="bi bi-box-seam me-2"></i> Ready for Pickup</span>
                 <strong>{{ $readyForPickup }}</strong>
             </div>
             <div class="rp-stat-row">
-                <span><span class="rp-icon-circle"><i class="bi bi-check2-all"></i></span> Received Today</span>
+                <span><i class="bi bi-check2-all me-2"></i> Received Today</span>
                 <strong>{{ $receivedToday }}</strong>
             </div>
             <div class="rp-stat-row" style="border-bottom:none;">
-                <span><span class="rp-icon-circle"><i class="bi bi-x-circle"></i></span> Cancelled</span>
+                <span><i class="bi bi-x-circle me-2"></i> Cancelled</span>
                 <strong>{{ $cancelled }}</strong>
             </div>
         </div>
     </div>
 
-    {{-- Quick Tips --}}
     <div class="ccst-card mb-0">
-        <div class="ccst-card-header yellow">Quick Reminders</div>
+        <div class="ccst-card-header yellow">
+            <i class="bi bi-lightbulb me-2"></i> Quick Reminders
+        </div>
         <div class="ccst-card-body p-0">
             <div class="rp-guide-step">
                 <span class="rp-step-num">1</span>
@@ -158,9 +141,38 @@
 
 @endsection
 
+{{-- ── EDIT MODAL (Placed outside content but before scripts) ── --}}
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1B6B3A; color:white; border:none;">
+                <h6 class="modal-title fw-700 mb-0" id="editModalLabel">
+                    <i class="bi bi-pencil-square me-2"></i> Edit Announcement
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editForm" method="POST">
+                @csrf
+                @method('PATCH')
+                <div class="modal-body" style="padding:20px;">
+                    <div class="form-group">
+                        <label class="form-label fw-600 mb-2">Announcement Content</label>
+                        <textarea name="content" id="editContent" class="form-control" rows="6" 
+                                  style="width:100%; border:1px solid #D0DDD0; border-radius:8px; padding:12px; font-family:'Poppins',sans-serif; font-size:0.85rem;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #e0e0e0; padding:15px 20px;">
+                    <button type="button" class="btn-cancel-modal" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-save-modal">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('styles')
 <style>
-    /* ── Hero ── */
+    /* Hero Section */
     .dash-hero {
         margin-bottom: 28px;
     }
@@ -180,7 +192,6 @@
         font-size: 0.95rem;
         color: #444;
         margin-bottom: 35px;
-        
     }
 
     .btn-view-requests {
@@ -194,25 +205,28 @@
         padding: 15px 24px;
         border-radius: 6px;
         text-decoration: none;
-        letter-spacing: 0.3px;
         transition: background 0.2s;
-        margin-bottom: 15px;     /* space below button — increase to add gap before cards */
+        margin-bottom: 15px;
     }
 
-    .btn-view-requests:hover { background: #0D7FBF; color: white; }
+    .btn-view-requests:hover {
+        background: #0D7FBF;
+        color: white;
+    }
 
-    /* ── Announcement cards ── */
+    /* Announcement Cards */
     .announce-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        gap: 20px;
+        margin-bottom: 20px;
     }
 
     .announce-card {
         background: white;
-        border: 1px solid #D0DDD0;
-        border-radius: 8px;
+        border-radius: 12px;
         overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         display: flex;
         flex-direction: column;
     }
@@ -220,41 +234,35 @@
     .announce-card-header {
         background: #F5C518;
         color: #1A1A1A;
-        font-size: 0.86rem;
-        font-weight: 700;
-        padding: 10px 16px;
-        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 800;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         text-transform: uppercase;
-        letter-spacing: 0.4px;
+        letter-spacing: 0.5px;
     }
 
     .announce-card-body {
-        padding: 14px 16px;
+        padding: 20px;
         flex: 1;
-        font-size: 0.83rem;
-        line-height: 1.6;
-        color: #333;
-    }
-
-    .announce-published-label {
-        font-weight: 700;
-        color: #1A9FE0;
-        margin-bottom: 8px;
-        font-size: 0.82rem;
+        min-height: 100px;
     }
 
     .announce-content {
-        font-size: 0.82rem;
+        font-size: 0.88rem;
         line-height: 1.65;
-        color: #444;
+        color: #333;
     }
 
     .announce-card-footer {
-        padding: 10px 16px;
-        border-top: 1px solid #D0DDD0;
+        padding: 12px 20px;
+        border-top: 1px solid #f0f0f0;
         display: flex;
         justify-content: flex-end;
-        gap: 8px;
+        gap: 10px;
+        background: #fafafa;
     }
 
     .btn-edit {
@@ -263,13 +271,19 @@
         border: none;
         border-radius: 6px;
         padding: 6px 18px;
-        font-size: 0.8rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 700;
         cursor: pointer;
-        transition: opacity 0.15s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
     }
 
-    .btn-edit:hover { opacity: 0.85; }
+    .btn-edit:hover {
+        opacity: 0.85;
+        transform: translateY(-1px);
+    }
 
     .btn-publish {
         background: #1A9FE0;
@@ -277,44 +291,131 @@
         border: none;
         border-radius: 6px;
         padding: 6px 18px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .btn-publish:hover {
+        background: #0D7FBF;
+        transform: translateY(-1px);
+    }
+
+    /* Modal Styles - Ensures modal appears on top */
+    .modal {
+        z-index: 1060;
+    }
+    
+    .modal-backdrop {
+        z-index: 1050;
+    }
+    
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 3.5rem);
+    }
+    
+    .modal-content {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 8px;
+    }
+
+    .form-control {
+        width: 100%;
+        border: 1px solid #D0DDD0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        font-family: 'Poppins', sans-serif;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #1B6B3A;
+        box-shadow: 0 0 0 3px rgba(27,107,58,0.1);
+    }
+
+    .btn-cancel-modal {
+        background: #f0f0f0;
+        color: #666;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
         font-size: 0.8rem;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.15s;
+        transition: background 0.2s;
     }
 
-    .btn-publish:hover { background: #0D7FBF; }
+    .btn-cancel-modal:hover {
+        background: #e0e0e0;
+    }
 
-    /* ── Right panel ── */
+    .btn-save-modal {
+        background: #1B6B3A;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-save-modal:hover {
+        background: #0C5A2E;
+    }
+
+    /* Right Panel */
     .rp-date-card {
-        background: rgba(255,255,255,0.18);
-        border-radius: 10px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 12px;
         padding: 16px;
         text-align: center;
         color: white;
         backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255,255,255,0.3);
+        margin-bottom: 20px;
     }
 
     .rp-date-day {
-        font-size: 2.8rem;
+        font-size: 3rem;
         font-weight: 700;
         line-height: 1;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        margin-top: 10px;
     }
 
     .rp-date-month {
-        font-size: 0.85rem;
+        font-size: 1rem;
         opacity: 0.85;
-        margin-top: 2px;
+        margin-top: 5px;
     }
 
     .rp-date-time {
-        font-size: 1rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        margin-top: 6px;
-        opacity: 0.9;
+        margin-top: 8px;
         letter-spacing: 1px;
     }
 
@@ -322,51 +423,53 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 9px 14px;
-        border-bottom: 1px solid rgba(255,255,255,0.2);
-        font-size: 0.82rem;
+        padding: 10px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+        font-size: 0.85rem;
         color: white;
+    }
+
+    .rp-stat-row:last-child {
+        border-bottom: none;
     }
 
     .rp-guide-step {
         display: flex;
         align-items: flex-start;
-        gap: 10px;
-        padding: 9px 14px;
-        border-bottom: 1px solid rgba(255,255,255,0.2);
-        font-size: 0.78rem;
+        gap: 12px;
+        padding: 10px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+        font-size: 0.8rem;
         color: rgba(255,255,255,0.92);
     }
 
-    .rp-step-num {
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
-        border-radius: 50%;
-        background: #F5C518;
-        color: #1A1A1A;
-        font-size: 0.68rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-top: 1px;
+    .rp-guide-step:last-child {
+        border-bottom: none;
     }
 
-    .rp-icon-circle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    .rp-step-num {
         width: 22px;
         height: 22px;
         min-width: 22px;
         border-radius: 50%;
-        background: #1A9FE0;
-        color: white;
-        font-size: 0.65rem;
-        margin-right: 6px;
-        vertical-align: middle;
-        flex-shrink: 0;
+        background: #F5C518;
+        color: #1A1A1A;
+        font-size: 0.7rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .announce-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .dash-heading {
+            font-size: 1.5rem;
+        }
     }
 </style>
 @endpush
@@ -377,8 +480,8 @@
     function updateTime() {
         const now = new Date();
         let h = now.getHours();
-        const m = String(now.getMinutes()).padStart(2,'0');
-        const s = String(now.getSeconds()).padStart(2,'0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
         const ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12;
         const el = document.getElementById('live-time');
@@ -387,11 +490,25 @@
     updateTime();
     setInterval(updateTime, 1000);
 
-    // Edit modal
-    function openEditModal(type, id, content) {
-        document.getElementById('editContent').value = content;
-        document.getElementById('editForm').action = `/registrar/announcements/${id}`;
-        new bootstrap.Modal(document.getElementById('editModal')).show();
+    // Edit announcement modal - opens centered on screen
+    function openEditModal(id, content) {
+        // Decode HTML entities in content
+        const textarea = document.getElementById('editContent');
+        if (textarea) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            textarea.value = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        // Set form action
+        const form = document.getElementById('editForm');
+        if (form) {
+            form.action = '/registrar/announcements/' + id;
+        }
+        
+        // Show modal (Bootstrap handles centering automatically with modal-dialog-centered)
+        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+        modal.show();
     }
 </script>
 @endpush

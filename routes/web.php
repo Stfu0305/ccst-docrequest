@@ -121,17 +121,21 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::patch('/requests/{id}/received', 'markReceived')->name('requests.markReceived');
     });
 
-    // ── Appointments ─────────────────────────────────────────────────────────
+    // ── Appointments Management ─────────────────────────────────────────
     Route::controller(RegistrarAppointment::class)->group(function() {
         Route::get('/appointments', 'index')->name('appointments.index');
-        Route::get('/time-slots', 'slots')->name('timeslots.index');
+        Route::patch('/appointments/{id}/complete', 'complete')->name('appointments.complete');
+        Route::patch('/appointments/{id}/missed', 'missed')->name('appointments.missed');
+        Route::get('/time-slots/{id}/data', 'getSlotData')->name('timeslots.data');
         Route::post('/time-slots', 'storeSlot')->name('timeslots.store');
         Route::patch('/time-slots/{id}', 'updateSlot')->name('timeslots.update');
+        Route::patch('/time-slots/{id}/toggle', 'toggleSlot')->name('timeslots.toggle');
     });
 
     // ── Reports ──────────────────────────────────────────────────────────────
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    
 
     // ── Notifications (AJAX) ─────────────────────────────────────────────────
     Route::controller(RegistrarNotification::class)->group(function() {
@@ -139,6 +143,15 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::patch('/notifications/{id}/read', 'markOneRead')->name('notifications.markOneRead');
         Route::post('/notifications/mark-all-read', 'markAllRead')->name('notifications.markAllRead');
     });
+
+    // ── Account ──────────────────────────────────────────────────────────
+    Route::get('/account', [RegistrarDashboard::class, 'account'])->name('account');
+    Route::get('/account/photo', [RegistrarDashboard::class, 'servePhoto'])->name('account.photo');
+    Route::post('/account/photo', [RegistrarDashboard::class, 'updatePhoto'])->name('account.updatePhoto');
+    Route::patch('/account/profile', [RegistrarDashboard::class, 'updateProfile'])->name('account.updateProfile');
+    Route::patch('/account/password', [RegistrarDashboard::class, 'updatePassword'])->name('account.updatePassword');
+
+    Route::get('/payments/{id}/proof', [RequestManagementController::class, 'serveProof'])->name('payments.proof');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -181,6 +194,10 @@ Route::middleware(['auth', 'role:cashier'])->prefix('cashier')->name('cashier.')
         Route::patch('/notifications/{id}/read', 'markOneRead')->name('notifications.markOneRead');
         Route::post('/notifications/mark-all-read', 'markAllRead')->name('notifications.markAllRead');
     });
+
+    Route::post('/settings', [PaymentSettingsController::class, 'store'])->name('settings.store');
+    Route::delete('/settings/{id}', [PaymentSettingsController::class, 'destroy'])->name('settings.destroy');
+
 });
 
 // Debug route - Remove after testing

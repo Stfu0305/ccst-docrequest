@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="check-notifications" content="{{ session('check_notifications') ? 'true' : 'false' }}">
 
-    {{-- Bell JS reads these URLs from meta tags instead of hardcoding paths --}}
-    <meta name="notif-fetch-url"    content="{{ route('registrar.notifications.index') }}">
-    <meta name="notif-read-url"     content="{{ route('registrar.notifications.markOneRead', ['id' => '__ID__']) }}">
-    <meta name="notif-readall-url"  content="{{ route('registrar.notifications.markAllRead') }}">
+    {{-- Bell notification URLs --}}
+    <meta name="notif-fetch-url"   content="{{ route('registrar.notifications.index') }}">
+    <meta name="notif-read-url"    content="{{ route('registrar.notifications.markOneRead', ['id' => '__ID__']) }}">
+    <meta name="notif-readall-url" content="{{ route('registrar.notifications.markAllRead') }}">
 
     <title>@yield('title', 'CCST DocRequest') — Registrar</title>
 
@@ -29,6 +30,7 @@
             --border:       #D0DDD0;
             --white:        #FFFFFF;
             --sidebar-w:    240px;
+            --right-w:      300px;
             --header-h:     50px;
             --footer-h:     35px;
         }
@@ -56,7 +58,7 @@
             position: sticky;
             top: 0;
             z-index: 200;
-            overflow: visible; /* must be visible so bell dropdown is not clipped */
+            overflow: visible;
         }
 
         .site-header .header-title {
@@ -73,7 +75,7 @@
             gap: 12px;
             margin-left: auto;
             padding-right: 4px;
-            position: relative; /* anchor for the dropdown */
+            position: relative;
         }
 
         /* ── BELL BUTTON ── */
@@ -209,10 +211,12 @@
             display: flex;
             flex-direction: column;
             padding: 18px 0 14px;
-            position: sticky;
+            position: fixed;
             top: var(--header-h);
+            left: 0;
             height: calc(100vh - var(--header-h) - var(--footer-h));
             overflow-y: auto;
+            z-index: 100;
         }
 
         .sidebar-logo {
@@ -336,28 +340,51 @@
             flex-shrink: 0;
         }
 
-        /* ── MAIN CONTENT ── */
+        /* ── MAIN CONTENT with background image ── */
         .main-content {
             flex: 1;
+            margin-left: var(--sidebar-w);
+            margin-right: var(--right-w);
             padding: 28px 24px;
-            padding-right: 320px;
             min-width: 0;
             overflow-y: auto;
             overflow-x: hidden;
+            background: url('{{ asset("images/page-bg.jpeg") }}') center/cover no-repeat fixed;
+            position: relative;
+            height: calc(100vh - var(--header-h) - var(--footer-h));
+        }
+
+        /* Semi-transparent overlay for readability */
+        .main-content::before {
+            content: '';
+            position: fixed;
+            top: var(--header-h);
+            left: var(--sidebar-w);
+            right: var(--right-w);
+            bottom: var(--footer-h);
+            background: rgba(255, 255, 255, 0.45);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Ensure content sits above overlay */
+        .main-content > * {
+            position: relative;
+            z-index: 1;
         }
 
         /* ── RIGHT PANEL ── */
         .right-panel {
-            width: 300px;
+            width: var(--right-w);
             position: fixed;
-            top: 0;
+            top: var(--header-h);
             right: 0;
-            height: 100vh;
+            bottom: var(--footer-h);
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 14px;
-            padding: calc(var(--header-h) + 14px) 14px calc(var(--footer-h) + 14px);
+            gap: 18px;
+            padding: 24px 16px;
             background: url('{{ asset("images/right-panel-building.png") }}') center/cover no-repeat;
             z-index: 50;
         }
@@ -369,6 +396,29 @@
             border-radius: 8px;
             overflow: hidden;
             margin-bottom: 14px;
+        }
+
+        .right-panel .ccst-card {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 10px;
+        }
+
+        .right-panel .ccst-card-body {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: white;
+        }
+
+        .right-panel .rp-stat-row {
+            border-bottom-color: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .right-panel .rp-guide-step {
+            border-bottom-color: rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.92);
         }
 
         .ccst-card-header {
@@ -399,20 +449,6 @@
             color: var(--text-dark);
         }
 
-        .right-panel .ccst-card {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.25);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .right-panel .ccst-card-body {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            color: white;
-        }
-
         /* ── FLASH MESSAGES ── */
         .flash-container { margin-bottom: 16px; }
 
@@ -434,6 +470,68 @@
             color: var(--white);
             font-weight: 500;
         }
+
+        /* Notification Styles */
+        .notif-item.unread {
+            background: #f5fdf7;
+            border-left: 3px solid #1B6B3A;
+        }
+
+        .notif-item:hover {
+            background: #f7faf7;
+        }
+
+        .notif-item .notif-msg {
+            font-size: 0.85rem;
+            color: #1a1a1a;
+            line-height: 1.4;
+        }
+
+        .notif-item .notif-time {
+            font-size: 0.72rem;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .bell-empty {
+            text-align: center;
+            padding: 28px 14px;
+            color: var(--text-gray);
+            font-size: 0.83rem;
+        }
+
+        /* Scrollable table body */
+        .table-scroll-body {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .right-panel {
+                display: none;
+            }
+            .main-content {
+                margin-right: 0;
+            }
+            .main-content::before {
+                right: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+                z-index: 1000;
+            }
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
     </style>
 
     @stack('styles')
@@ -443,27 +541,21 @@
     {{-- HEADER --}}
     <header class="site-header">
         <span class="header-title">
-            Clark College of Science and Technology's &nbsp; Document Request and Tracking System
+            Clark College of Science and Technology's Document Request and Tracking System
         </span>
         <div class="header-right">
 
-            {{-- BELL BUTTON --}}
-            <button class="bell-btn" id="bellBtn" title="Notifications" type="button">
+            <button class="bell-btn" id="bellBtn">
                 <i class="bi bi-bell-fill"></i>
                 <span class="bell-badge" id="bellBadge" style="display:none;">0</span>
             </button>
-
-            {{-- BELL DROPDOWN PANEL --}}
             <div class="bell-dropdown" id="bellDropdown">
                 <div class="bell-dropdown-header">
                     <span><i class="bi bi-bell me-1"></i> Notifications</span>
-                    <button class="bell-mark-all" id="bellMarkAll" type="button">Mark all as read</button>
+                    <button class="bell-mark-all" id="bellMarkAll">Mark all as read</button>
                 </div>
                 <div class="bell-dropdown-body" id="bellDropdownBody">
-                    <div class="bell-empty">
-                        <i class="bi bi-bell-slash"></i>
-                        No new notifications
-                    </div>
+                    <div class="bell-empty">No new notifications</div>
                 </div>
             </div>
 
@@ -477,14 +569,13 @@
         <aside class="sidebar">
 
             <div class="sidebar-logo">
-                <img src="{{ asset('images/ccst-logo.png') }}" alt="CCST"
-                     onerror="this.style.display='none'">
+                <img src="{{ asset('images/ccst-logo.png') }}" alt="CCST" onerror="this.style.display='none'">
             </div>
 
             <div class="sidebar-avatar">
                 <div class="avatar-circle">
                     @if(auth()->user()->profile_photo)
-                        <img src="{{ asset('storage/' . auth()->user()->profile_photo) }}" alt="Avatar">
+                        <img src="{{ route('registrar.account.photo') }}" alt="Avatar">
                     @else
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                     @endif
@@ -494,24 +585,19 @@
             </div>
 
             <nav class="sidebar-nav">
-                <a href="{{ route('registrar.dashboard') }}"
-                   class="{{ request()->routeIs('registrar.dashboard') ? 'active' : '' }}">
+                <a href="{{ route('registrar.dashboard') }}" class="{{ request()->routeIs('registrar.dashboard') ? 'active' : '' }}">
                     Dashboard
                 </a>
-                <a href="{{ route('registrar.requests.index') }}"
-                   class="{{ request()->routeIs('registrar.requests.*') ? 'active' : '' }}">
-                    Document Requests
+                <a href="{{ route('registrar.requests.index') }}" class="{{ request()->routeIs('registrar.requests.*') ? 'active' : '' }}">
+                    Requests
                 </a>
-                <a href="{{ route('registrar.appointments.index') }}"
-                   class="{{ request()->routeIs('registrar.appointments.*') ? 'active' : '' }}">
+                <a href="{{ route('registrar.appointments.index') }}" class="{{ request()->routeIs('registrar.appointments.*') ? 'active' : '' }}">
                     Appointments
                 </a>
-                <a href="{{ route('registrar.reports.index') }}"
-                   class="{{ request()->routeIs('registrar.reports.*') ? 'active' : '' }}">
+                <a href="{{ route('registrar.reports.index') }}" class="{{ request()->routeIs('registrar.reports.*') ? 'active' : '' }}">
                     Reports
                 </a>
-                <a href="{{ route('registrar.account') }}"
-                   class="{{ request()->routeIs('registrar.account') ? 'active' : '' }}">
+                <a href="{{ route('registrar.account') }}" class="{{ request()->routeIs('registrar.account') ? 'active' : '' }}">
                     Account
                 </a>
             </nav>
@@ -520,9 +606,7 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="logout-btn">
-                        <span class="logout-icon">
-                            <i class="bi bi-box-arrow-right"></i>
-                        </span>
+                        <span class="logout-icon"><i class="bi bi-box-arrow-right"></i></span>
                         Log Out
                     </button>
                 </form>
@@ -533,12 +617,7 @@
         {{-- MAIN CONTENT --}}
         <main class="main-content">
             <div class="flash-container">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
-                        <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                @endif
+                {{-- Only show error messages --}}
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show py-2" role="alert">
                         <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
@@ -546,7 +625,6 @@
                     </div>
                 @endif
             </div>
-
             @yield('content')
         </main>
 
@@ -567,109 +645,199 @@
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
 
     <script>
-    (function () {
-        const FETCH_URL    = document.querySelector('meta[name="notif-fetch-url"]').content;
-        const READ_URL     = document.querySelector('meta[name="notif-read-url"]').content;
-        const READ_ALL_URL = document.querySelector('meta[name="notif-readall-url"]').content;
-        const CSRF         = document.querySelector('meta[name="csrf-token"]').content;
+    // ═══════════════════════════════════════════════════════════════════════
+    // CCST NOTIFICATION SYSTEM - Registrar
+    // ═══════════════════════════════════════════════════════════════════════
 
-        const bellBtn      = document.getElementById('bellBtn');
-        const bellBadge    = document.getElementById('bellBadge');
+    (function() {
+        const FETCH_URL = '/registrar/notifications';
+        const READ_URL_TEMPLATE = '/registrar/notifications/__ID__/read';
+        const READ_ALL_URL = '/registrar/notifications/mark-all-read';
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        
+        let lastNotificationCount = 0;
+        let hasAutoOpenedThisSession = false;
+        
+        const bellBtn = document.getElementById('bellBtn');
+        const bellBadge = document.getElementById('bellBadge');
         const bellDropdown = document.getElementById('bellDropdown');
-        const bellBody     = document.getElementById('bellDropdownBody');
-        const markAllBtn   = document.getElementById('bellMarkAll');
-
-        function esc(str) {
+        const bellBody = document.getElementById('bellDropdownBody');
+        const markAllBtn = document.getElementById('bellMarkAll');
+        
+        function escapeHtml(str) {
             if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
-
-        function setBadge(count) {
+        
+        function updateBadge(count) {
+            if (!bellBadge) return;
             if (count > 0) {
-                bellBadge.textContent = count > 9 ? '9+' : count;
+                bellBadge.textContent = count > 99 ? '99+' : count;
                 bellBadge.style.display = 'flex';
             } else {
                 bellBadge.style.display = 'none';
             }
         }
-
-        function renderList(notifications) {
+        
+        function renderNotificationsWithHighlight(notifications, highlightId = null) {
+            if (!bellBody) return;
+            
             if (!notifications || notifications.length === 0) {
-                bellBody.innerHTML = '<div class="bell-empty"><i class="bi bi-bell-slash"></i>No new notifications</div>';
+                bellBody.innerHTML = `<div class="bell-empty"><i class="bi bi-bell-slash"></i>No notifications yet.</div>`;
                 return;
             }
+            
             let html = '';
-            notifications.forEach(function (n) {
-                html += '<a href="' + esc(n.url) + '" class="notif-item" data-id="' + esc(n.id) + '">' +
-                        '<div class="notif-msg">' + esc(n.message) + '</div>' +
-                        '<div class="notif-time">' + esc(n.time) + '</div></a>';
+            notifications.forEach(function(notif) {
+                const unreadClass = notif.read ? '' : 'unread';
+                const isHighlighted = (highlightId && notif.id === highlightId);
+                const highlightStyle = isHighlighted ? 'background: rgba(255, 241, 182, 1.0); border-left: 4px solid #F5C518;' : '';
+                
+                html += `<div class="notif-item ${unreadClass}" data-id="${escapeHtml(notif.id)}" data-url="${escapeHtml(notif.url)}" style="cursor:pointer; padding:12px 14px; border-bottom:1px solid #f0f0f0; ${highlightStyle}">
+                            <div style="flex:1;">
+                                <div class="notif-msg" style="font-size:0.85rem; color:#1a1a1a; line-height:1.4;">${escapeHtml(notif.message)}</div>
+                                <div class="notif-time" style="font-size:0.72rem; color:#999; margin-top:4px;">${escapeHtml(notif.time)}</div>
+                            </div>
+                            ${isHighlighted ? '<div style="margin-left:8px;"><i class="bi bi-star-fill" style="color:#F5C518; font-size:0.7rem;"></i></div>' : ''}
+                        </div>`;
             });
+            
             bellBody.innerHTML = html;
-            bellBody.querySelectorAll('.notif-item').forEach(function (link) {
-                link.addEventListener('click', function (e) {
+            
+            document.querySelectorAll('.notif-item').forEach(function(item) {
+                item.addEventListener('click', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     const id = this.dataset.id;
-                    const url = this.getAttribute('href');
-                    fetch(READ_URL.replace('__ID__', id), {
-                        method: 'PATCH',
-                        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin',
-                    }).finally(function () { window.location.href = url; });
+                    const url = this.dataset.url;
+                    
+                    if (id && READ_URL_TEMPLATE) {
+                        const readUrl = READ_URL_TEMPLATE.replace('__ID__', id);
+                        fetch(readUrl, {
+                            method: 'PATCH',
+                            headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin'
+                        }).finally(function() {
+                            if (url && url !== '#') window.location.href = url;
+                        });
+                    } else if (url && url !== '#') {
+                        window.location.href = url;
+                    }
                 });
             });
         }
-
-        function loadNotifications() {
-            bellBody.innerHTML = '<div class="bell-empty"><i class="bi bi-arrow-repeat"></i>Loading...</div>';
+        
+        function loadAndShowNotifications() {
             fetch(FETCH_URL, {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF },
-                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                credentials: 'same-origin'
             })
-            .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-            .then(function (data) { setBadge(data.count); renderList(data.notifications); })
-            .catch(function (err) {
-                bellBody.innerHTML = '<div class="bell-empty" style="color:#DC3545;"><i class="bi bi-exclamation-circle"></i>Could not load notifications.</div>';
-                console.error('Bell error:', err);
-            });
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                renderNotificationsWithHighlight(data.notifications || []);
+                updateBadge(data.unread || 0);
+            })
+            .catch(function(err) { console.error('Failed to load notifications:', err); });
         }
-
-        bellBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (bellDropdown.style.display === 'block') {
-                bellDropdown.style.display = 'none';
-            } else {
-                bellDropdown.style.display = 'block';
-                loadNotifications();
-            }
-        });
-
-        document.addEventListener('click', function (e) {
-            if (!bellBtn.contains(e.target) && !bellDropdown.contains(e.target)) {
-                bellDropdown.style.display = 'none';
-            }
-        });
-
-        markAllBtn.addEventListener('click', function () {
+        
+        function markAllAsRead() {
             fetch(READ_ALL_URL, {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                credentials: 'same-origin',
-            }).then(function () {
-                setBadge(0);
-                bellBody.innerHTML = '<div class="bell-empty"><i class="bi bi-bell-slash"></i>No new notifications</div>';
+                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(function() {
+                updateBadge(0);
+                if (bellDropdown && bellDropdown.style.display === 'block') loadAndShowNotifications();
+            })
+            .catch(function(err) { console.error('Failed to mark all as read:', err); });
+        }
+        
+        if (bellBtn) {
+            bellBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (bellDropdown.style.display === 'block') {
+                    bellDropdown.style.display = 'none';
+                } else {
+                    loadAndShowNotifications();
+                    bellDropdown.style.display = 'block';
+                }
             });
+        }
+        
+        if (markAllBtn) {
+            markAllBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                markAllAsRead();
+            });
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (bellBtn && !bellBtn.contains(e.target) && bellDropdown && !bellDropdown.contains(e.target)) {
+                bellDropdown.style.display = 'none';
+            }
         });
-
-        // Auto-load badge count on page load
+        
+        // Initial badge count
         fetch(FETCH_URL, {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF },
-            credentials: 'same-origin',
-        }).then(function (res) { return res.json(); }).then(function (data) { setBadge(data.count); }).catch(function () {});
-
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF_TOKEN },
+            credentials: 'same-origin'
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) { updateBadge(data.unread || 0); })
+        .catch(function() {});
+        
+        // Check for immediate notification from form submission
+        const shouldCheck = document.querySelector('meta[name="check-notifications"]')?.content === 'true';
+        if (shouldCheck) {
+            setTimeout(function() {
+                fetch(FETCH_URL, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                    credentials: 'same-origin'
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.notifications && data.notifications.length > 0) {
+                        const newestId = data.notifications[0]?.id;
+                        renderNotificationsWithHighlight(data.notifications, newestId);
+                        updateBadge(data.unread || 0);
+                        if (bellDropdown) {
+                            bellDropdown.style.display = 'block';
+                            setTimeout(function() { if (bellDropdown) bellDropdown.style.display = 'none'; }, 8000);
+                        }
+                    }
+                });
+                const meta = document.querySelector('meta[name="check-notifications"]');
+                if (meta) meta.content = 'false';
+            }, 500);
+        }
+        
+        // Poll for new notifications every 10 seconds
+        setInterval(function() {
+            fetch(FETCH_URL, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF_TOKEN },
+                credentials: 'same-origin'
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                const newUnread = data.unread || 0;
+                const hasNew = newUnread > lastNotificationCount;
+                updateBadge(newUnread);
+                if (hasNew && !hasAutoOpenedThisSession) {
+                    hasAutoOpenedThisSession = true;
+                    renderNotificationsWithHighlight(data.notifications || []);
+                    if (bellDropdown) {
+                        bellDropdown.style.display = 'block';
+                        setTimeout(function() { if (bellDropdown) bellDropdown.style.display = 'none'; }, 8000);
+                    }
+                }
+                lastNotificationCount = newUnread;
+            })
+            .catch(function(err) { console.error('Poll error:', err); });
+        }, 10000);
     })();
     </script>
 
