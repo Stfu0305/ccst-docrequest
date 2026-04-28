@@ -14,22 +14,16 @@ class StatusLog extends Model
         'notes',
     ];
 
-    // -------------------------------------------------------------------------
-    // RELATIONSHIPS
-    // -------------------------------------------------------------------------
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
 
-    /**
-     * Which document request this log entry belongs to.
-     */
+    // Relationships
     public function documentRequest()
     {
         return $this->belongsTo(DocumentRequest::class);
     }
 
-    /**
-     * Who triggered this status change (student, registrar, or cashier).
-     * Usage: $log->changedBy->name
-     */
     public function changedBy()
     {
         return $this->belongsTo(User::class, 'changed_by');

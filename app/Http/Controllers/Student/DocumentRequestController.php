@@ -6,15 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\DocumentRequest;
 use App\Models\DocumentRequestItem;
 use App\Models\DocumentType;
-use App\Models\PaymentSetting;
 use App\Models\StatusLog;
-use App\Traits\SendsDatabaseNotifications; // ← ADD THIS
+use App\Traits\SendsDatabaseNotifications;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentRequestController extends Controller
 {
-    use SendsDatabaseNotifications; // ← ADD THIS
+    use SendsDatabaseNotifications;
 
     // ─────────────────────────────────────────────────────────────────────────
     // SHOW REQUEST FORM
@@ -73,6 +72,7 @@ class DocumentRequestController extends Controller
             'section'          => $validated['section'],
             'total_fee'        => 0,
             'status'           => 'pending',
+            'is_printable'     => false, // Will be set after checking document types
         ]);
 
         // Step 2: Generate the reference number
@@ -82,6 +82,8 @@ class DocumentRequestController extends Controller
 
         // Step 3: Create one DocumentRequestItem per selected document.
         $totalFee = 0;
+        $allPrintable = true;
+
         foreach ($validated['documents'] as $doc) {
             $docType = DocumentType::findOrFail($doc['document_type_id']);
 
@@ -95,10 +97,18 @@ class DocumentRequestController extends Controller
             ]);
 
             $totalFee += $docType->fee * $doc['copies'];
+
+            // Check if any document is non-printable
+            if (!$docType->is_printable) {
+                $allPrintable = false;
+            }
         }
 
-        // Step 4: Save the calculated total.
-        $docRequest->update(['total_fee' => $totalFee]);
+        // Step 4: Save the calculated total and printable flag
+        $docRequest->update([
+            'total_fee'     => $totalFee,
+            'is_printable'  => $allPrintable,
+        ]);
 
         // Step 5: Write the initial status log entry.
         StatusLog::create([
@@ -109,44 +119,26 @@ class DocumentRequestController extends Controller
             'notes'               => 'Request submitted by student.',
         ]);
 
-        // ✅ CHANGED: Send notification instead of flash message
-        $message = 'Your request has been submitted! Reference: ' . $docRequest->reference_number . '. Please choose a payment method below.';
+        // Send notification to student
+        $message = 'Your request has been submitted! Reference: ' . $docRequest->reference_number;
         $url = route('student.requests.show', $docRequest->id);
         $this->sendNotificationToCurrentUser($message, $url);
-        session()->flash('new_notification', true);
+        session()->flash('check_notifications', true);
 
-        // Step 6: Redirect to the Request Summary page (NO flash message)
-        return redirect()->route('student.requests.show', $docRequest->id);
+        // Step 6: Redirect based on document printability
+        if ($allPrintable) {
+            // All documents are printable - redirect to appointment booking
+            return redirect()->route('student.appointments.create', $docRequest->id)
+                ->with('success', 'Your request has been submitted! Please book an appointment for pickup.');
+        }
 
-        // Step 6: Redirect to the Request Summary page.
-        // The student will choose a payment method there.
-
-        // ✅ CHANGED: Send notification instead of flash message
-        $message = 'Your request has been submitted! Reference: ' . $docRequest->reference_number . '. Please choose a payment method below.';
-        $url = route('student.requests.show', $docRequest->id);
-
-        // DEBUG: Log before sending
-        \Log::info('Attempting to send notification', [
-            'user_id' => $user->id,
-            'user_email' => $user->email,
-            'message' => $message,
-            'url' => $url
-        ]);
-
-        $this->sendNotificationToCurrentUser($message, $url);
-
-        // DEBUG: Check after sending
-        \Log::info('Notification sent, checking database');
-        $checkCount = $user->notifications()->count();
-        \Log::info('User now has ' . $checkCount . ' notifications');
-
-        // Step 6: Redirect to the Request Summary page (NO flash message)
-        return redirect()->route('student.requests.show', $docRequest->id);
-
+        // Some documents require processing - redirect to summary
+        return redirect()->route('student.requests.show', $docRequest->id)
+            ->with('info', 'Your request has been submitted. You will be notified when your documents are ready for pickup.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SHOW REQUEST SUMMARY + PAYMENT METHOD SELECTOR
+    // SHOW REQUEST SUMMARY
     // GET /student/requests/{id}
     // ─────────────────────────────────────────────────────────────────────────
     public function show($id)
@@ -155,13 +147,10 @@ class DocumentRequestController extends Controller
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        $paymentSettings = PaymentSetting::where('is_active', true)
-            ->get()
-            ->keyBy('method');
-
-        return view('student.requests.show', compact('docRequest', 'paymentSettings'));
+        return view('student.requests.show', compact('docRequest'));
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
     // CANCEL REQUEST
     // DELETE /student/requests/{id}
     // ─────────────────────────────────────────────────────────────────────────
@@ -173,12 +162,12 @@ class DocumentRequestController extends Controller
         if ($docRequest->status !== 'pending') {
             return back()->with('error', 'Only pending requests can be cancelled.');
         }
-        
+
         // Check if there's an active appointment
         $activeAppointment = \App\Models\Appointment::where('document_request_id', $docRequest->id)
             ->where('status', 'scheduled')
             ->first();
-        
+
         if ($activeAppointment) {
             return back()->with('error', 'Please cancel your appointment first before cancelling the request.');
         }
@@ -198,20 +187,22 @@ class DocumentRequestController extends Controller
         $message = 'Request ' . $docRequest->reference_number . ' has been cancelled.';
         $url = route('student.requests.history');
         $this->sendNotificationToCurrentUser($message, $url);
+        session()->flash('check_notifications', true);
 
         return redirect()->route('student.requests.history');
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
     // REQUEST HISTORY
     // GET /student/history
     // ─────────────────────────────────────────────────────────────────────────
     public function history()
     {
-        $requests = DocumentRequest::with(['items.documentType', 'paymentProof', 'officialReceipt', 'appointment'])
+        $requests = DocumentRequest::with(['items.documentType', 'appointment.timeSlot'])
             ->where('user_id', Auth::id())
             ->latest()
             ->paginate(10);
-        
+
         // Get all active time slots for the booking modal
         $timeSlots = \App\Models\TimeSlot::where('is_active', true)
             ->orderBy('start_time')

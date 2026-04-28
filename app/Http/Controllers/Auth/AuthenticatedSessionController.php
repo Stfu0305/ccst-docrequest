@@ -11,19 +11,31 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Display the login view.
-     */
     public function create(): View
     {
         return view('auth.login');
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // First, check if user exists with this email
+        $user = \App\Models\User::where('email', $request->email)->first();
+
+        // If user doesn't exist, show generic error
+        if (!$user) {
+            return back()->withErrors([
+                'email' => 'These credentials do not match our records.',
+            ])->onlyInput('email');
+        }
+
+        // If user is a student and not verified, show specific message
+        if ($user->isStudent() && !$user->is_verified) {
+            return back()->withErrors([
+                'email' => 'Your account is pending verification. Please wait for the registrar to verify your account before logging in.',
+            ])->onlyInput('email');
+        }
+
+        // Attempt to authenticate
         $request->authenticate();
 
         $request->session()->regenerate();
@@ -31,9 +43,6 @@ class AuthenticatedSessionController extends Controller
         return redirect()->intended(route('dashboard', absolute: false));
     }
 
-    /**
-     * Destroy an authenticated session.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();

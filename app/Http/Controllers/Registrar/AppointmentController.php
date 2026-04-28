@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\TimeSlot;
 use App\Traits\SendsDatabaseNotifications;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AppointmentController extends Controller
 {
@@ -134,4 +135,37 @@ class AppointmentController extends Controller
             'is_active' => $slot->is_active,
         ]);
     }
+    
+
+    public function printCashierList()
+    {
+        $todayAppointments = Appointment::with(['student', 'documentRequest', 'timeSlot'])
+            ->whereDate('appointment_date', today())
+            ->orderBy('time_slot_id', 'asc')
+            ->get()
+            ->map(function ($appointment) {
+                return (object) [
+                    'time_slot' => $appointment->timeSlot->label ?? '—',
+                    'student_name' => $appointment->student->full_name ?? $appointment->student->name,
+                    'student_number' => $appointment->student->student_number,
+                    'reference_number' => $appointment->documentRequest->reference_number,
+                    'amount' => $appointment->documentRequest->total_fee,
+                    'strand' => $appointment->student->strand,
+                    'grade_section' => $appointment->student->grade_level . ' - ' . $appointment->student->section,
+                    'documents' => $appointment->documentRequest->items->map(function($item) {
+                        return $item->documentType->name . ' × ' . $item->copies;
+                    })->implode(', '),
+                ];
+            });
+
+        $date = today()->format('F d, Y');
+        $printed_by = auth()->user()->name;
+        $totalAmount = $todayAppointments->sum('amount');
+        $totalStudents = $todayAppointments->count();
+
+        $pdf = Pdf::loadView('pdf.cashier-list', compact('todayAppointments', 'date', 'printed_by', 'totalAmount', 'totalStudents'));
+        
+        return $pdf->stream('cashier-list-' . today()->format('Y-m-d') . '.pdf');
+    }
+
 }

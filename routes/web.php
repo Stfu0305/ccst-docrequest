@@ -18,6 +18,12 @@ use App\Http\Controllers\Registrar\RequestManagementController;
 use App\Http\Controllers\Registrar\AppointmentController as RegistrarAppointment;
 use App\Http\Controllers\Registrar\ReportController;
 use App\Http\Controllers\Registrar\NotificationController as RegistrarNotification;
+use App\Http\Controllers\Registrar\StudentVerificationController;
+use App\Http\Controllers\Registrar\CalendarController;
+use App\Http\Controllers\Registrar\WalkInController;
+use App\Http\Controllers\Registrar\DocumentGeneratorController;
+use App\Http\Controllers\Registrar\EmailTemplateController;
+
 
 // Cashier Controllers
 use App\Http\Controllers\Cashier\DashboardController as CashierDashboard;
@@ -99,6 +105,15 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
         Route::patch('/notifications/{id}/read', 'markOneRead')->name('notifications.markOneRead');
         Route::post('/notifications/mark-all-read', 'markAllRead')->name('notifications.markAllRead');
     });
+    
+    // ── Appointments ─────────────────────────────────────────────────────────
+    Route::controller(StudentAppointment::class)->group(function() {
+        Route::get('/appointments/create/{requestId}', 'create')->name('appointments.create');
+        Route::post('/appointments', 'store')->name('appointments.store');
+        Route::patch('/appointments/{id}', 'reschedule')->name('appointments.reschedule');
+        Route::delete('/appointments/{id}', 'cancel')->name('appointments.cancel');
+    });
+
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -124,6 +139,8 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
     // ── Appointments Management ─────────────────────────────────────────
     Route::controller(RegistrarAppointment::class)->group(function() {
         Route::get('/appointments', 'index')->name('appointments.index');
+        // Route::get('/appointments/print-cashier-list', 'printCashierList')->name('appointments.print-cashier-list');
+        Route::get('/appointments/print-cashier-list', [RegistrarAppointment::class, 'printCashierList'])->name('appointments.print-cashier-list'); // ADD THIS LINE
         Route::patch('/appointments/{id}/complete', 'complete')->name('appointments.complete');
         Route::patch('/appointments/{id}/missed', 'missed')->name('appointments.missed');
         Route::get('/time-slots/{id}/data', 'getSlotData')->name('timeslots.data');
@@ -144,6 +161,7 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::post('/notifications/mark-all-read', 'markAllRead')->name('notifications.markAllRead');
     });
 
+
     // ── Account ──────────────────────────────────────────────────────────
     Route::get('/account', [RegistrarDashboard::class, 'account'])->name('account');
     Route::get('/account/photo', [RegistrarDashboard::class, 'servePhoto'])->name('account.photo');
@@ -152,6 +170,59 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
     Route::patch('/account/password', [RegistrarDashboard::class, 'updatePassword'])->name('account.updatePassword');
 
     Route::get('/payments/{id}/proof', [RequestManagementController::class, 'serveProof'])->name('payments.proof');
+
+    // ── Student Verification ──────────────────────────────────────────────
+    Route::prefix('students')->name('students.')->group(function () {
+        Route::get('/pending', [StudentVerificationController::class, 'pending'])->name('pending');
+        Route::patch('/{id}/verify', [StudentVerificationController::class, 'verify'])->name('verify');
+        Route::post('/verify-bulk', [StudentVerificationController::class, 'verifyBulk'])->name('verify-bulk');
+        Route::get('/{id}/id', [StudentVerificationController::class, 'showId'])->name('show-id');
+        Route::delete('/{id}/reject', [StudentVerificationController::class, 'reject'])->name('reject');
+    });
+
+    // ── Calendar ──────────────────────────────────────────────────────────
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar');
+
+    // ── Walk-in Mode ──────────────────────────────────────────────────────
+    Route::prefix('walkin')->name('walkin.')->group(function () {
+        Route::get('/', [WalkInController::class, 'index'])->name('index');
+        Route::post('/search', [WalkInController::class, 'search'])->name('search');
+        Route::get('/create', [WalkInController::class, 'create'])->name('create');
+        Route::post('/store', [WalkInController::class, 'store'])->name('store');
+        Route::post('/request', [WalkInController::class, 'createRequest'])->name('request');
+        Route::get('/payment/{id}', [WalkInController::class, 'printPayment'])->name('payment');
+    });
+
+    // ── Document Generation ──────────────────────────────────────────────
+    Route::prefix('documents')->name('documents.')->group(function () {
+        Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
+        Route::get('/generate-all/{requestId}', [DocumentGeneratorController::class, 'generateAll'])->name('generate-all');
+        Route::get('/preview/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'preview'])->name('preview');
+    });
+
+    // ── Calendar ──────────────────────────────────────────────────────────
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar');
+    Route::get('/calendar/appointments', [CalendarController::class, 'getAppointments'])->name('calendar.appointments');
+    Route::get('/calendar/time-slots', [CalendarController::class, 'getTimeSlots'])->name('calendar.time-slots');
+    Route::patch('/calendar/appointments/{id}/reschedule', [CalendarController::class, 'reschedule'])->name('calendar.reschedule');
+
+    
+    // ── Time Slot Management (AJAX) ──────────────────────────────────────
+    Route::post('/time-slots', [CalendarController::class, 'storeTimeSlot'])->name('timeslots.store');
+    Route::put('/time-slots/{id}', [CalendarController::class, 'updateTimeSlot'])->name('timeslots.update');
+    Route::delete('/time-slots/{id}', [CalendarController::class, 'deleteTimeSlot'])->name('timeslots.delete');
+    Route::patch('/time-slots/{id}/toggle', [CalendarController::class, 'toggleTimeSlot'])->name('timeslots.toggle');
+    Route::get('/time-slots/{id}/data', [CalendarController::class, 'getSlotData'])->name('timeslots.data');
+
+    // ── Email Templates ──────────────────────────────────────────────────
+    Route::prefix('email-templates')->name('email-templates.')->group(function () {
+        Route::get('/', [EmailTemplateController::class, 'index'])->name('index');
+        Route::patch('/{id}', [EmailTemplateController::class, 'update'])->name('update');
+        Route::post('/{id}/reset', [EmailTemplateController::class, 'reset'])->name('reset');
+        Route::get('/{id}/preview', [EmailTemplateController::class, 'preview'])->name('preview');
+        Route::get('/email-templates/{id}', [EmailTemplateController::class, 'show'])->name('email-templates.show');
+    });
+
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
