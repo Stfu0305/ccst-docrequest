@@ -31,26 +31,26 @@
             <table class="requests-table" id="requestsTable">
                 <thead>
                     <tr>
-                        <th style="width: 9%">Reference No.</th>
+                        <th style="width: 10%">Reference No.</th>
                         <th style="width: 15%">Student Name</th>
                         <th style="width: 8%">Request Date</th>
                         <th style="width: 8%">Total Amount</th>
-                        <th style="width: 12%">Payment Method</th>
-                        <th style="width: 12%">Payment Status</th>
-                        <th style="width: 14%">Request Status</th>
-                        <th style="width: 12%">Action</th>
+                        <th style="width: 10%">Payment Method</th>
+                        <th style="width: 10%">Payment Status</th>
+                        <th style="width: 12%">Request Status</th>
+                        <th style="width: 27%">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($requests as $request)
                     <tr data-status="{{ $request->status }}">
-                        <td style="width: 12%">
+                        <td style="width: 10%">
                             <strong>{{ $request->reference_number }}</strong>
                         </td>
-                        <td style="width: 18%">{{ $request->full_name }}</td>
-                        <td style="width: 10%">{{ $request->created_at->format('M d, Y') }}</td>
-                        <td style="width: 10%">₱{{ number_format($request->total_fee, 2) }}</td>
-                        <td style="width: 12%">
+                        <td style="width: 15%">{{ $request->full_name }}</td>
+                        <td style="width: 8%">{{ $request->created_at->format('M d, Y') }}</td>
+                        <td style="width: 8%">₱{{ number_format($request->total_fee, 2) }}</td>
+                        <td style="width: 10%">
                             @if($request->payment_method === 'gcash')
                                 <span class="method-badge method-gcash"><i class="bi bi-phone"></i> GCash</span>
                             @elseif($request->payment_method === 'bank_transfer')
@@ -61,7 +61,7 @@
                                 <span class="method-badge method-na">—</span>
                             @endif
                         </td>
-                        <td style="width: 12%">
+                        <td style="width: 10%">
                             @php
                                 $payStatus = match(true) {
                                     $request->status === 'cancelled' => ['label' => 'Cancelled', 'class' => 'status-cancelled'],
@@ -76,7 +76,7 @@
                             @endphp
                             <span class="status-badge {{ $payStatus['class'] }}">{{ $payStatus['label'] }}</span>
                         </td>
-                        <td style="width: 14%">
+                        <td style="width: 12%">
                             @php
                                 $reqStatus = match($request->status) {
                                     'pending' => ['label' => 'Pending', 'class' => 'req-pending'],
@@ -96,40 +96,49 @@
                                 <div class="claiming-hint" title="Claiming Number">{{ $request->claiming_number }}</div>
                             @endif
                         </td>
-                        <td style="width: 12%">
+                        <td style="width: 27%">
                             <div class="action-buttons">
                                 <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view">
                                     <i class="bi bi-eye"></i> View
                                 </a>
                                 
+                                {{-- Generate Document Button (for printable documents) --}}
+                                @if($request->status === 'payment_verified' || $request->status === 'ready_for_pickup')
+                                    @foreach($request->items as $item)
+                                        @if($item->documentType->is_printable)
+                                            <a href="{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}" 
+                                               class="action-btn-generate" target="_blank">
+                                                <i class="bi bi-file-pdf"></i> Generate {{ $item->documentType->code }}
+                                            </a>
+                                        @endif
+                                    @endforeach
+                                @endif
+                                
+                                {{-- Status Dropdown --}}
                                 @if(!in_array($request->status, ['received', 'cancelled']))
                                 <div class="status-dropdown">
                                     <button class="action-btn-status" onclick="toggleStatusDropdown({{ $request->id }})">
                                         <i class="bi bi-arrow-repeat"></i> Status
                                     </button>
                                     <div class="status-dropdown-menu" id="status-dropdown-{{ $request->id }}">
-                                        {{-- From Pending/Verified to Processing --}}
                                         @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected', 'payment_verified']))
                                             <button onclick="updateStatus({{ $request->id }}, 'processing')" class="status-option">
                                                 <i class="bi bi-gear"></i> Start Processing
                                             </button>
                                         @endif
                                         
-                                        {{-- From Processing to Ready for Pickup --}}
                                         @if($request->status === 'processing')
                                             <button onclick="updateStatus({{ $request->id }}, 'ready_for_pickup')" class="status-option">
                                                 <i class="bi bi-box-seam"></i> Ready for Pickup
                                             </button>
                                         @endif
                                         
-                                        {{-- From Ready for Pickup to Received --}}
                                         @if($request->status === 'ready_for_pickup')
                                             <button onclick="markReceived({{ $request->id }}, '{{ $request->claiming_number }}')" class="status-option">
                                                 <i class="bi bi-check2-all"></i> Mark as Received
                                             </button>
                                         @endif
                                         
-                                        {{-- Cancel option (always available except for received) --}}
                                         @if(!in_array($request->status, ['received', 'cancelled']))
                                             <button onclick="updateStatus({{ $request->id }}, 'cancelled')" class="status-option status-cancel">
                                                 <i class="bi bi-x-circle"></i> Cancel Request
@@ -151,13 +160,6 @@
         </div>
     </div>
 </div>
-
-{{-- Pagination
-@if($requests->hasPages())
-<div class="pagination-wrapper">
-    {{ $requests->links() }}
-</div>
-@endif --}}
 
 {{-- Hidden forms for status updates --}}
 <form id="statusForm" method="POST" style="display:none;">
@@ -376,7 +378,7 @@
         background: #f8fafb;
     }
 
-    /* Make first column text left-aligned for better readability */
+    /* Make first column text left-aligned */
     .requests-table td:first-child,
     .requests-table th:first-child {
         text-align: left;
@@ -461,11 +463,31 @@
         font-size: 0.7rem;
         font-weight: 600;
         text-decoration: none;
-        width: 85px;
+        width: 100px;
     }
 
     .action-btn-view:hover {
         background: #0D7FBF;
+        color: white;
+    }
+
+    .action-btn-generate {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: #1B6B3A;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+        width: 100px;
+    }
+
+    .action-btn-generate:hover {
+        background: #0C5A2E;
         color: white;
     }
 
@@ -482,7 +504,7 @@
         font-size: 0.7rem;
         font-weight: 600;
         cursor: pointer;
-        width: 85px;
+        width: 100px;
         transition: all 0.2s;
     }
 
@@ -543,66 +565,6 @@
 
     .status-cancel:hover {
         background: #F8D7DA;
-    }
-
-    Pagination Wrapper
-    .pagination-wrapper {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-
-    .pagination-wrapper nav {
-        display: inline-block;
-    }
-
-    .pagination-wrapper .pagination {
-        display: flex;
-        gap: 5px;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin: 0;
-        padding: 0;
-    }
-
-    .pagination-wrapper .page-item {
-        list-style: none;
-    }
-
-    .pagination-wrapper .page-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 36px;
-        height: 36px;
-        padding: 0 8px;
-        background: white;
-        border: 1px solid #D0DDD0;
-        border-radius: 6px;
-        color: #1B6B3A;
-        font-size: 0.8rem;
-        font-weight: 500;
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .pagination-wrapper .page-link:hover {
-        background: #F0F7F0;
-        border-color: #1B6B3A;
-    }
-
-    .pagination-wrapper .active .page-link {
-        background: #1B6B3A;
-        border-color: #1B6B3A;
-        color: white;
-    }
-
-    .pagination-wrapper .disabled .page-link {
-        color: #ccc;
-        background: #f8f9fa;
-        cursor: not-allowed;
     }
 
     /* Right Panel Styles */
@@ -750,7 +712,6 @@
     // Toggle status dropdown
     function toggleStatusDropdown(requestId) {
         const dropdown = document.getElementById(`status-dropdown-${requestId}`);
-        // Close all other dropdowns
         document.querySelectorAll('.status-dropdown-menu').forEach(menu => {
             if (menu.id !== `status-dropdown-${requestId}`) {
                 menu.classList.remove('show');

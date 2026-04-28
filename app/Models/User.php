@@ -12,9 +12,9 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'first_name',      // Add this
-        'middle_name',     // Add this
-        'last_name',       // Add this
+        'first_name',
+        'middle_name',
+        'last_name',
         'name',
         'email',
         'password',
@@ -26,6 +26,13 @@ class User extends Authenticatable
         'grade_level',
         'section',
         'profile_photo',
+        'student_id_photo',
+        'is_verified',
+        'verified_at',
+        'verified_by',
+        'is_walk_in',
+        'walk_in_registered_by',
+        'walk_in_registered_at',
     ];
 
     protected $hidden = [
@@ -38,6 +45,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_verified' => 'boolean',
+            'is_walk_in' => 'boolean',
+            'verified_at' => 'datetime',
+            'walk_in_registered_at' => 'datetime',
         ];
     }
 
@@ -48,6 +59,14 @@ class User extends Authenticatable
     {
         $middle = $this->middle_name ? ' ' . $this->middle_name . ' ' : ' ';
         return $this->first_name . $middle . $this->last_name;
+    }
+
+    /**
+     * Get the user's display name
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->first_name . ' ' . $this->last_name;
     }
 
     /**
@@ -68,6 +87,7 @@ class User extends Authenticatable
         });
     }
 
+    // Relationships
     public function documentRequests()
     {
         return $this->hasMany(DocumentRequest::class);
@@ -78,6 +98,17 @@ class User extends Authenticatable
         return $this->hasMany(Appointment::class);
     }
 
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function walkInRegisteredBy()
+    {
+        return $this->belongsTo(User::class, 'walk_in_registered_by');
+    }
+
+    // Role checks
     public function isStudent(): bool
     {
         return $this->role === 'student';
@@ -88,8 +119,18 @@ class User extends Authenticatable
         return $this->role === 'registrar';
     }
 
-    public function isCashier(): bool
+    // Verification helpers
+    public function isVerified(): bool
     {
-        return $this->role === 'cashier';
+        return $this->is_verified;
+    }
+
+    public function markAsVerified($registrarId = null)
+    {
+        $this->update([
+            'is_verified' => true,
+            'verified_at' => now(),
+            'verified_by' => $registrarId ?? auth()->id(),
+        ]);
     }
 }

@@ -577,10 +577,10 @@
                     @if(auth()->user()->profile_photo)
                         <img src="{{ route('registrar.account.photo') }}" alt="Avatar">
                     @else
-                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                        {{ strtoupper(substr(auth()->user()->first_name, 0, 1)) }}
                     @endif
                 </div>
-                <div class="user-name">{{ auth()->user()->name }}</div>
+                <div class="user-name">{{ auth()->user()->first_name }} {{ auth()->user()->last_name }}</div>
                 <span class="role-badge">Registrar</span>
             </div>
 
@@ -589,10 +589,10 @@
                     Dashboard
                 </a>
                 <a href="{{ route('registrar.requests.index') }}" class="{{ request()->routeIs('registrar.requests.*') ? 'active' : '' }}">
-                    Requests
+                    Pending
                 </a>
-                <a href="{{ route('registrar.appointments.index') }}" class="{{ request()->routeIs('registrar.appointments.*') ? 'active' : '' }}">
-                    Appointments
+                <a href="{{ route('registrar.calendar') }}" class="{{ request()->routeIs('registrar.calendar') ? 'active' : '' }}">
+                    Calendar
                 </a>
                 <a href="{{ route('registrar.reports.index') }}" class="{{ request()->routeIs('registrar.reports.*') ? 'active' : '' }}">
                     Reports

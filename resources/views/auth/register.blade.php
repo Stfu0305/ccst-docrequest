@@ -7,7 +7,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@700;800&family=Volkhov:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Volkhov:wght@700&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -32,6 +32,7 @@
             z-index: 1;
         }
 
+        /* Full-page background */
         .page-bg {
             position: fixed;
             inset: 0;
@@ -57,6 +58,7 @@
             );
         }
 
+        /* Left panel */
         .left-panel {
             width: 50%;
             flex-shrink: 0;
@@ -107,6 +109,7 @@
             max-width: 380px;
         }
 
+        /* Right panel */
         .right-panel {
             position: fixed;
             top: 0;
@@ -122,26 +125,42 @@
             padding: 40px 48px;
             box-shadow: -8px 0 40px rgba(0,0,0,0.18);
             overflow-y: auto;
+            position: relative;
+            z-index: 1;
         }
 
-        .curve-img {
-            position: fixed;
-            left: 628px;
+        /* Curve image as background inside right panel */
+        .curve-bg {
+            position: absolute;
             top: 0;
-            height: 100vh;
-            width: auto;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            z-index: 0;
+            opacity: 0.15;
             pointer-events: none;
-            z-index: 10;
         }
 
+        .curve-bg img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: auto;
+        }
+
+        /* Register card */
         .register-card {
             width: 100%;
-            max-width: 500px;
+            max-width: 550px;
             background: var(--white);
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0px 7px 20px 5px rgba(0,0,0,0.25);
             animation: fadeUp 0.5s ease both;
+            position: relative;
+            z-index: 1;
         }
 
         .card-header-strip {
@@ -170,7 +189,7 @@
             margin-bottom: 15px;
         }
 
-        /* Three columns for name fields */
+        /* Name fields - 3 columns */
         .name-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -204,16 +223,13 @@
             border: 2px solid #DBEAFE;
             border-radius: 10px;
             font-family: 'Poppins', sans-serif;
-            font-size: 0.70rem;
+            font-size: 0.7rem;
             color: var(--text-dark);
             background: #F8FAFF;
             transition: border-color 0.2s, box-shadow 0.2s;
             outline: none;
             appearance: none;
         }
-
-        .input-wrap input::placeholder,
-        .input-wrap select option[value=""] { color: #B0BAC8; }
 
         .input-wrap input:focus,
         .input-wrap select:focus {
@@ -277,7 +293,7 @@
             font-weight: 700;
             cursor: pointer;
             margin-top: 6px;
-            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            transition: background 0.2s, transform 0.1s;
             box-shadow: 0 4px 14px rgba(26,159,224,0.35);
         }
 
@@ -285,8 +301,6 @@
             background: var(--blue-dark);
             transform: translateY(-1px);
         }
-
-        .btn-register:active { transform: translateY(0); }
 
         .below-card {
             margin-top: 14px;
@@ -301,8 +315,6 @@
             text-decoration: none;
         }
 
-        .below-card a:hover { text-decoration: underline; }
-
         .right-footer {
             position: absolute;
             bottom: 16px;
@@ -310,12 +322,6 @@
             font-size: 0.7rem;
             color: var(--text-gray);
             line-height: 1.6;
-        }
-
-        .right-footer a {
-            color: var(--blue-main);
-            font-weight: 600;
-            text-decoration: none;
         }
 
         @keyframes fadeUp {
@@ -326,7 +332,7 @@
         @media (max-width: 768px) {
             body { flex-direction: column; height: auto; overflow: auto; }
             .left-panel { width: 100%; min-height: 220px; padding: 32px 24px; }
-            .right-panel { width: 100%; border-radius: 0; margin-left: 0; padding: 32px 20px 60px; }
+            .right-panel { width: 100%; border-radius: 0; margin-left: 0; padding: 32px 20px 60px; position: relative; }
             .right-footer { position: static; margin-top: 20px; }
             .fields-grid { grid-template-columns: 1fr; }
             .field-full { grid-column: 1; }
@@ -349,9 +355,12 @@
         </div>
     </div>
 
-    <img class="curve-img" src="{{ asset('images/right-panel-curve.png') }}" alt="">
-
     <div class="right-panel">
+        {{-- Curve image as background (behind card) --}}
+        <div class="curve-bg">
+            <img src="{{ asset('images/right-panel-login.png') }}" alt="">
+        </div>
+
         <div class="register-card">
             <div class="card-header-strip">
                 <h2>Create an Account</h2>
@@ -359,7 +368,7 @@
             <div class="card-body-inner">
                 <p class="card-subtitle">Fill in your details to register as a student</p>
 
-                <form method="POST" action="{{ route('register') }}">
+                <form method="POST" action="{{ route('register') }}" enctype="multipart/form-data">
                     @csrf
 
                     {{-- Name Fields - 3 columns --}}
@@ -375,7 +384,7 @@
                                     required>
                             </div>
                             @error('first_name')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -385,11 +394,10 @@
                                 <i class="bi bi-person-badge field-icon"></i>
                                 <input type="text" id="middle_name" name="middle_name"
                                     value="{{ old('middle_name') }}"
-                                    placeholder="e.g. Santos (if none, leave blank)"
-                                    class="{{ $errors->has('middle_name') ? 'is-invalid' : '' }}">
+                                    placeholder="e.g. Santos (if none, leave blank)">
                             </div>
                             @error('middle_name')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -404,7 +412,7 @@
                                     required>
                             </div>
                             @error('last_name')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
@@ -422,7 +430,7 @@
                                     required>
                             </div>
                             @error('student_number')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -438,7 +446,7 @@
                                     required>
                             </div>
                             @error('contact_number')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -455,7 +463,7 @@
                                     required>
                             </div>
                             @error('email')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -477,7 +485,7 @@
                                 </select>
                             </div>
                             @error('strand')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -495,7 +503,7 @@
                                 </select>
                             </div>
                             @error('grade_level')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -511,7 +519,24 @@
                                 </select>
                             </div>
                             @error('section')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Student ID Upload --}}
+                        <div class="field-group field-full">
+                            <label for="student_id_photo">Student ID <span style="color:#DC3545;">*</span></label>
+                            <div class="input-wrap">
+                                <i class="bi bi-card-image field-icon"></i>
+                                <input type="file" id="student_id_photo" name="student_id_photo"
+                                    accept=".jpg,.jpeg,.png,.pdf"
+                                    class="field-input @error('student_id_photo') is-invalid @enderror"
+                                    style="padding-left: 32px;"
+                                    required>
+                            </div>
+                            <small style="font-size:0.65rem; color:#666;">Upload a clear photo of your school ID (JPG, PNG, or PDF, max 2MB)</small>
+                            @error('student_id_photo')
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -530,7 +555,7 @@
                                 </button>
                             </div>
                             @error('password')
-                                <div class="field-error"><i class="bi bi-exclamation-circle-fill"></i> {{ $message }}</div>
+                                <div class="field-error">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -560,7 +585,7 @@
         </div>
 
         <div class="right-footer">
-            <a href="#">CCST Website</a><br>
+            {{-- <a href="#">CCST Website</a><br> --}}
             &copy; Copyright 2026 Clark College of Science and Technology<br>
             Document Request System
         </div>
@@ -579,7 +604,7 @@
             }
         }
 
-        // Dynamic section dropdown based on strand and grade level
+        // Dynamic section dropdown
         const strandSelect = document.getElementById('strand');
         const gradeLevelSelect = document.getElementById('grade_level');
         const sectionSelect = document.getElementById('section');
@@ -593,12 +618,9 @@
                 return;
             }
             
-            // Extract grade number (11 or 12)
             const gradeNum = gradeLevel === 'Grade 11' ? '11' : '12';
-            
-            // Generate sections A through E
             const sections = ['A', 'B', 'C', 'D', 'E'];
-            let options = `<option value="" disabled selected>Select section</option>`;
+            let options = '<option value="" disabled selected>Select section</option>';
             
             sections.forEach(letter => {
                 const sectionValue = `${strand}-${gradeNum}${letter}`;
@@ -613,7 +635,6 @@
         strandSelect.addEventListener('change', generateSections);
         gradeLevelSelect.addEventListener('change', generateSections);
         
-        // Initialize sections if values are already selected (e.g., after form error)
         if (strandSelect.value && gradeLevelSelect.value) {
             generateSections();
         }

@@ -22,21 +22,42 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // The dashboard blade expects two separate announcement variables —
-        // one for the general announcement card, one for transaction days card.
-        // We fetch each by type individually so the view can reference them
-        // as $announcement and $transactionDays directly.
-        $announcement    = \App\Models\Announcement::where('type', 'announcement')
-                            ->where('is_published', true)
-                            ->latest()
-                            ->first();
+        // Get upcoming appointment
+        $upcomingAppointment = \App\Models\Appointment::with(['documentRequest', 'timeSlot'])
+            ->where('user_id', $user->id)
+            ->where('status', 'scheduled')
+            ->whereDate('appointment_date', '>=', today())
+            ->orderBy('appointment_date', 'asc')
+            ->first();
+
+        // Get counts for stats
+        $pendingCount = DocumentRequest::where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'ready_for_pickup'])
+            ->count();
+
+        $completedCount = DocumentRequest::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->count();
+
+        // Announcements
+        $announcement = \App\Models\Announcement::where('type', 'announcement')
+            ->where('is_published', true)
+            ->latest()
+            ->first();
 
         $transactionDays = \App\Models\Announcement::where('type', 'transaction_days')
-                            ->where('is_published', true)
-                            ->latest()
-                            ->first();
+            ->where('is_published', true)
+            ->latest()
+            ->first();
 
-        return view('student.dashboard', compact('user', 'announcement', 'transactionDays'));
+        return view('student.dashboard', compact(
+            'user',
+            'announcement',
+            'transactionDays',
+            'upcomingAppointment',
+            'pendingCount',
+            'completedCount'
+        ));
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -64,10 +85,6 @@ class DashboardController extends Controller
     // ─────────────────────────────────────────────────────────────────────
     // SERVE PROFILE PHOTO (private storage)
     // GET /student/account/photo
-    //
-    // Photos are stored in storage/app/private/photos/ — never publicly
-    // accessible. This method streams the file through an authenticated
-    // route so only the logged-in student can see their own photo.
     // ─────────────────────────────────────────────────────────────────────
     public function servePhoto()
     {
@@ -106,6 +123,7 @@ class DashboardController extends Controller
         $message = 'Your profile information has been updated successfully.';
         $url = route('student.account.index');
         $this->sendNotificationToCurrentUser($message, $url);
+        session()->flash('check_notifications', true);
 
         return redirect()->route('student.account.index');
     }
@@ -128,9 +146,9 @@ class DashboardController extends Controller
         }
 
         // Store new photo in storage/app/private/photos/
-        $file     = $request->file('profile_photo');
+        $file = $request->file('profile_photo');
         $filename = 'user_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
-        $path     = $file->storeAs('photos', $filename, 'local');
+        $path = $file->storeAs('photos', $filename, 'local');
 
         $user->update(['profile_photo' => $path]);
 
@@ -138,6 +156,7 @@ class DashboardController extends Controller
         $message = 'Your profile photo has been updated successfully.';
         $url = route('student.account.index');
         $this->sendNotificationToCurrentUser($message, $url);
+        session()->flash('check_notifications', true);
 
         return redirect()->route('student.account.index');
     }
@@ -171,6 +190,7 @@ class DashboardController extends Controller
         $message = 'Your password has been changed successfully. Please use your new password next time you log in.';
         $url = route('student.account.index');
         $this->sendNotificationToCurrentUser($message, $url);
+        session()->flash('check_notifications', true);
 
         return redirect()->route('student.account.index');
     }

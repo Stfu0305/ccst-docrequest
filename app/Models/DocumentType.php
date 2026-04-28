@@ -7,31 +7,62 @@ use Illuminate\Database\Eloquent\Model;
 class DocumentType extends Model
 {
     protected $fillable = [
-        'name',
         'code',
+        'name',
         'fee',
-        'has_school_year',
         'processing_days',
-        'description',
+        'has_school_year',
+        'is_printable',
         'is_active',
     ];
 
     protected $casts = [
-        'fee'             => 'decimal:2', // Always 2 decimal places (e.g. 80.00)
-        'has_school_year' => 'boolean',   // Returns true/false, not 1/0
-        'is_active'       => 'boolean',
+        'fee' => 'decimal:2',
+        'has_school_year' => 'boolean',
+        'is_printable' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
-    // -------------------------------------------------------------------------
-    // RELATIONSHIPS
-    // -------------------------------------------------------------------------
-
-    /**
-     * A document type can appear in many request item rows.
-     * Usage: $documentType->requestItems
-     */
-    public function requestItems()
+    // Relationships
+    public function documentRequestItems()
     {
         return $this->hasMany(DocumentRequestItem::class);
+    }
+
+    public function generatedDocuments()
+    {
+        return $this->hasMany(GeneratedDocument::class);
+    }
+
+    // Scopes
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopePrintable($query)
+    {
+        return $query->where('is_printable', true);
+    }
+
+    public function scopeNonPrintable($query)
+    {
+        return $query->where('is_printable', false);
+    }
+
+    // Helper methods
+    public function isPrintable(): bool
+    {
+        return $this->is_printable;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->is_active;
+    }
+
+    public function hasSchoolYear(): bool
+    {
+        return $this->has_school_year;
     }
 }
