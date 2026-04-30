@@ -380,13 +380,21 @@
             top: var(--header-h);
             right: 0;
             bottom: var(--footer-h);
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            padding: 24px 16px;
-            background: url('{{ asset("images/right-panel-building.png") }}') center/cover no-repeat;
+            overflow: hidden;
+            background: transparent;
             z-index: 50;
+            display: flex;
+            align-items: stretch;
+            padding: 0;
+        }
+
+
+        .right-panel-steps-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
         }
 
         /* ── SHARED CARD STYLES ── */
@@ -533,13 +541,6 @@
             }
         }
 
-        .right-panel-steps-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center top;
-        display: block;
-         }
 
     </style>
 
