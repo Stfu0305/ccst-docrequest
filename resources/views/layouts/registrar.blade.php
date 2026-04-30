@@ -532,6 +532,15 @@
                 margin-left: 0;
             }
         }
+
+        .right-panel-steps-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center top;
+        display: block;
+         }
+
     </style>
 
     @stack('styles')
@@ -630,7 +639,9 @@
 
         {{-- RIGHT PANEL --}}
         <aside class="right-panel">
-            @yield('right-panel')
+            <img src="{{ asset('images/4-easy-steps-to-process.png') }}"
+                alt="4 Easy Steps to Process Documents"
+                class="right-panel-steps-img">
         </aside>
 
     </div>

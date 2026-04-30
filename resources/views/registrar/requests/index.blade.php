@@ -157,6 +157,46 @@
                     @endforelse
                 </tbody>
             </table>
+
+        </div>
+    </div>
+</div>
+
+{{-- MOVED RIGHT PANEL CONTENT - Request Overview Stats --}}
+<div class="stats-overview-row">
+    <div class="stats-overview-card">
+        <div class="stats-overview-icon"><i class="bi bi-folder2"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $totalRequests ?? 0 }}</div>
+            <div class="stats-overview-label">Total Requests</div>
+        </div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $pendingCount ?? 0 }}</div>
+            <div class="stats-overview-label">Pending</div>
+        </div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-icon"><i class="bi bi-gear"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $processingCount ?? 0 }}</div>
+            <div class="stats-overview-label">Processing</div>
+        </div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-icon"><i class="bi bi-box-seam"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $readyCount ?? 0 }}</div>
+            <div class="stats-overview-label">Ready for Pickup</div>
+        </div>
+    </div>
+    <div class="stats-overview-card">
+        <div class="stats-overview-icon"><i class="bi bi-check2-all"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $receivedCount ?? 0 }}</div>
+            <div class="stats-overview-label">Received</div>
         </div>
     </div>
 </div>
@@ -665,6 +705,44 @@
         .search-box {
             width: 100%;
         }
+    }
+
+    .stats-overview-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 24px;
+        justify-content: space-between;
+    }
+
+    .stats-overview-card {
+        flex: 1;
+        min-width: 120px;
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .stats-overview-icon {
+        font-size: 1.8rem;
+        color: #1B6B3A;
+    }
+
+    .stats-overview-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1A1A1A;
+        line-height: 1.2;
+    }
+
+    .stats-overview-label {
+        font-size: 0.65rem;
+        color: #666;
+        text-transform: uppercase;
     }
 </style>
 @endpush

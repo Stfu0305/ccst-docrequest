@@ -611,9 +611,9 @@
 
         {{-- RIGHT PANEL — 4-easy-steps.png fills this column edge-to-edge --}}
         <aside class="right-panel">
-            <img src="{{ asset('images/4-easy-steps.png') }}"
-                 alt="4 Easy Steps to Create a Request"
-                 class="right-panel-steps-img">
+            <img src="{{ asset('images/4-easy-steps-to-request.png') }}"
+                alt="4 Easy Steps to Request a Document"
+                class="right-panel-steps-img">
         </aside>
 
     </div>
