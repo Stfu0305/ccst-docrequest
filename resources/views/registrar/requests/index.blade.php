@@ -126,10 +126,6 @@
                         </td>
                         <td style="width: 27%">
                             <div class="action-buttons" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view" style="width: 100%; justify-content: center;">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-
                                 {{-- Print Button --}}
                                 @if(!in_array($request->status, ['completed', 'cancelled', 'received']))
                                     @php $printableItems = $request->items->filter(fn($i) => $i->documentType->is_printable); @endphp
@@ -142,6 +138,10 @@
                                         @endforeach
                                     @endif
                                 @endif
+
+                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view" style="width: 100%; justify-content: center;">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
                             </div>
                         </td>
                     </tr>
