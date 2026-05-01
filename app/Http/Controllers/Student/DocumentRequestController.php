@@ -33,34 +33,21 @@ class DocumentRequestController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function store(Request $request)
     {
-        // ── STEP 1: Strip out empty rows BEFORE validation ───────────────────────
-        $rawDocuments = collect($request->input('documents', []))
-            ->filter(function ($doc) {
-                return !empty($doc['document_type_id'])
-                    && isset($doc['copies'])
-                    && (int) $doc['copies'] > 0;
-            })
-            ->values()
-            ->toArray();
-
-        $request->merge(['documents' => $rawDocuments]);
-
-        // ── STEP 2: Now validate ─────────────────────────────────────────────────
         $validated = $request->validate([
-            'contact_number'               => 'required|string|max:20',
-            'course_program'               => 'required|string|max:255',
-            'year_level'                   => 'required|string|max:20',
-            'section'                      => 'required|string|max:50',
-            'documents'                    => 'required|array|min:1',
-            'documents.*.document_type_id' => 'required|integer|exists:document_types,id',
-            'documents.*.copies'           => 'required|integer|min:1|max:99',
-            'documents.*.assessment_year'  => 'nullable|string|max:20',
-            'documents.*.semester'         => 'nullable|string|max:20',
+            'contact_number' => 'required|string',
+            'course_program' => 'required|string',
+            'year_level'     => 'required|string',
+            'section'        => 'required|string',
+            'documents'      => 'required|array',
+            'documents.*.document_type_id' => 'required|exists:document_types,id',
+            'documents.*.copies'           => 'required|integer|min:1',
+            'documents.*.assessment_year'  => 'nullable|string',
+            'documents.*.semester'         => 'nullable|string',
         ]);
 
         $user = Auth::user();
 
-        // Step 1: Create the DocumentRequest row.
+        // Create the DocumentRequest
         $docRequest = DocumentRequest::create([
             'reference_number' => 'TEMP',
             'user_id'          => $user->id,
@@ -72,15 +59,13 @@ class DocumentRequestController extends Controller
             'section'          => $validated['section'],
             'total_fee'        => 0,
             'status'           => 'pending',
-            'is_printable'     => false, // Will be set after checking document types
         ]);
 
-        // Step 2: Generate the reference number
+        // Generate reference number
         $docRequest->update([
             'reference_number' => 'DQST-' . date('Y') . '-' . str_pad($docRequest->id, 5, '0', STR_PAD_LEFT),
         ]);
 
-        // Step 3: Create one DocumentRequestItem per selected document.
         $totalFee = 0;
         $allPrintable = true;
 
@@ -97,20 +82,15 @@ class DocumentRequestController extends Controller
             ]);
 
             $totalFee += $docType->fee * $doc['copies'];
-
-            // Check if any document is non-printable
+            
             if (!$docType->is_printable) {
                 $allPrintable = false;
             }
         }
 
-        // Step 4: Save the calculated total and printable flag
-        $docRequest->update([
-            'total_fee'     => $totalFee,
-            'is_printable'  => $allPrintable,
-        ]);
+        $docRequest->update(['total_fee' => $totalFee]);
 
-        // Step 5: Write the initial status log entry.
+        // Log status change
         StatusLog::create([
             'document_request_id' => $docRequest->id,
             'changed_by'          => $user->id,
@@ -119,20 +99,19 @@ class DocumentRequestController extends Controller
             'notes'               => 'Request submitted by student.',
         ]);
 
-        // Send notification to student
+        // Send notification
         $message = 'Your request has been submitted! Reference: ' . $docRequest->reference_number;
-        $url = route('student.requests.show', $docRequest->id);
-        $this->sendNotificationToCurrentUser($message, $url);
+        $this->sendNotificationToCurrentUser($message, route('student.requests.show', $docRequest->id));
         session()->flash('check_notifications', true);
 
-        // Step 6: Redirect based on document printability
+        // Redirect based on printability
         if ($allPrintable) {
-            // All documents are printable - redirect to appointment booking
+            // Ready to print - can book appointment immediately
             return redirect()->route('student.appointments.create', $docRequest->id)
                 ->with('success', 'Your request has been submitted! Please book an appointment for pickup.');
         }
 
-        // Some documents require processing - redirect to summary
+        // Not ready to print - wait for registrar
         return redirect()->route('student.requests.show', $docRequest->id)
             ->with('info', 'Your request has been submitted. You will be notified when your documents are ready for pickup.');
     }

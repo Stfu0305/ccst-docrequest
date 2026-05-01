@@ -126,22 +126,57 @@
                         </td>
                         <td style="width: 27%">
                             <div class="action-buttons" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-                                {{-- Print Button --}}
-                                @if(!in_array($request->status, ['completed', 'cancelled', 'received']))
-                                    @php $printableItems = $request->items->filter(fn($i) => $i->documentType->is_printable); @endphp
-                                    @if($printableItems->count() > 0)
-                                        @foreach($printableItems as $item)
-                                            <button onclick="generateAndComplete('{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}', {{ $request->id }}, '{{ $item->documentType->code }}')"
-                                               class="action-btn-generate" style="width: 100%; justify-content: center;">
-                                                <i class="bi bi-printer"></i> Print {{ $item->documentType->code }}
-                                            </button>
-                                        @endforeach
-                                    @endif
-                                @endif
-
+                                {{-- PRINT BUTTON (shows for all requests) --}}
+                                <button class="action-btn-print" onclick="printRequest({{ $request->id }})">
+                                    <i class="bi bi-printer"></i> Print
+                                </button>
+                                
                                 <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view" style="width: 100%; justify-content: center;">
                                     <i class="bi bi-eye"></i> View
                                 </a>
+                                
+                                {{-- Generate Document Button (for printable documents when ready) --}}
+                                @if($request->status === 'pending' || $request->status === 'ready_for_pickup')
+                                    @foreach($request->items as $item)
+                                        @if($item->documentType->is_printable)
+                                            <a href="{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}" 
+                                               class="action-btn-generate" target="_blank" style="width: 100%; justify-content: center;">
+                                                <i class="bi bi-file-pdf"></i> Generate {{ $item->documentType->code }}
+                                            </a>
+                                        @endif
+                                    @endforeach
+                                @endif
+                                
+                                {{-- Status Dropdown --}}
+                                @if(!in_array($request->status, ['completed', 'cancelled']))
+                                <div class="status-dropdown">
+                                    <button class="action-btn-status" onclick="toggleStatusDropdown({{ $request->id }})">
+                                        <i class="bi bi-arrow-repeat"></i> Status
+                                    </button>
+                                    <div class="status-dropdown-menu" id="status-dropdown-{{ $request->id }}">
+                                        {{-- For Not Ready to Print documents --}}
+                                        @if($request->status === 'pending')
+                                            <button onclick="updateStatus({{ $request->id }}, 'ready_for_pickup')" class="status-option">
+                                                <i class="bi bi-box-seam"></i> Ready for Pickup
+                                            </button>
+                                        @endif
+                                        
+                                        {{-- Mark as Completed (after printing) --}}
+                                        @if($request->status === 'ready_for_pickup')
+                                            <button onclick="markAsCompleted({{ $request->id }})" class="status-option">
+                                                <i class="bi bi-check2-all"></i> Mark as Completed
+                                            </button>
+                                        @endif
+                                        
+                                        {{-- Cancel option --}}
+                                        @if(!in_array($request->status, ['completed', 'cancelled']))
+                                            <button onclick="updateStatus({{ $request->id }}, 'cancelled')" class="status-option status-cancel">
+                                                <i class="bi bi-x-circle"></i> Cancel Request
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endif
                             </div>
                         </td>
                     </tr>
@@ -724,6 +759,28 @@
         color: #666;
         text-transform: uppercase;
     }
+
+    .action-btn-print {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: #1B6B3A;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+        width: 100%;
+        cursor: pointer;
+        border: none;
+    }
+
+    .action-btn-print:hover {
+        background: #0C5A2E;
+        color: white;
+    }
 </style>
 @endpush
 
@@ -876,6 +933,35 @@
                 const form = document.getElementById('statusForm');
                 form.action = `/registrar/requests/${id}/status`;
                 document.getElementById('statusValue').value = 'completed';
+                form.submit();
+            }
+        });
+    }
+
+    // Print request details
+    function printRequest(requestId) {
+        // Open the request show page in a new window and trigger print
+        const printWindow = window.open(`/registrar/requests/${requestId}`, '_blank');
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
+
+    // Mark as completed (auto-marks payment as paid)
+    function markAsCompleted(id) {
+        Swal.fire({
+            title: 'Mark as Completed?',
+            text: 'This will mark the request as completed and the payment as PAID. This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#1B6B3A',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Mark as Completed',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.getElementById('statusForm');
+                form.action = `/registrar/requests/${id}/completed`;
                 form.submit();
             }
         });

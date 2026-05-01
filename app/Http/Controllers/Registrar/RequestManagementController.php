@@ -166,52 +166,42 @@ class RequestManagementController extends Controller
         return redirect()->route('registrar.requests.index');
     }
 
-    public function markAsPaid(Request $request, $id)
+    /**
+     * Mark request as completed (after printing)
+     */
+    public function markAsCompleted($id)
     {
         $docRequest = DocumentRequest::findOrFail($id);
-
-        if ($docRequest->payment_status === 'paid') {
-            $message = "ℹ️ Request {$docRequest->reference_number} is already marked as paid.";
-            $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $docRequest->id));
-            session()->flash('check_notifications', true);
-            return redirect()->back();
-        }
-
-        $receiptNumber = $request->input('receipt_number');
-        $cashierName = $request->input('cashier_name');
-
+        
+        $oldStatus = $docRequest->status;
         $docRequest->update([
+            'status' => 'completed',
             'payment_status' => 'paid',
-            'paid_at'        => now(),
-            'receipt_number' => $receiptNumber,
-            'cashier_name'   => $cashierName,
+            'paid_at' => now(),
+            'completed_at' => now(),
         ]);
-
-        // Log it
+        
+        // Log status change
         StatusLog::create([
             'document_request_id' => $docRequest->id,
-            'changed_by'          => Auth::id(),
-            'old_status'          => $docRequest->status,
-            'new_status'          => $docRequest->status,
-            'notes'               => "Payment marked as PAID by registrar. Receipt: {$receiptNumber}",
+            'changed_by' => Auth::id(),
+            'old_status' => $oldStatus,
+            'new_status' => 'completed',
+            'notes' => 'Request completed and payment marked as paid.',
         ]);
-
-        // Notify student
+        
+        // Send notification to student
         $student = $docRequest->user;
         if ($student) {
-            $message = "💰 Payment for your request {$docRequest->reference_number} has been confirmed. Receipt No: {$receiptNumber}.";
+            $message = "✅ Your documents for request {$docRequest->reference_number} have been completed. Thank you for using CCST DocRequest!";
             $url = route('student.requests.history');
             $this->sendNotification($student, $message, $url);
         }
-
-        // Notify registrar
-        $this->sendNotificationToCurrentUser(
-            "✅ Request {$docRequest->reference_number} marked as PAID. Receipt: {$receiptNumber}",
-            route('registrar.requests.show', $docRequest->id)
-        );
+        
         session()->flash('check_notifications', true);
-
-        return redirect()->back()->with('success', 'Payment marked as paid successfully.');
+        
+        return redirect()->route('registrar.requests.index')
+            ->with('success', 'Request marked as completed.');
     }
 
     public function serveProof($id)
