@@ -125,23 +125,23 @@
                             @endif
                         </td>
                         <td style="width: 27%">
-                            <div class="action-buttons">
-                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view">
+                            <div class="action-buttons" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view" style="width: 100%; justify-content: center;">
                                     <i class="bi bi-eye"></i> View
                                 </a>
-                                
-                                {{-- Print Document Button (for printable documents) --}}
+
+                                {{-- Print Button --}}
                                 @if(!in_array($request->status, ['completed', 'cancelled', 'received']))
-                                    @foreach($request->items as $item)
-                                        @if($item->documentType->is_printable)
-                                            <button onclick="generateAndComplete('{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}', {{ $request->id }}, '{{ $item->documentType->code }}')" 
-                                               class="action-btn-generate">
+                                    @php $printableItems = $request->items->filter(fn($i) => $i->documentType->is_printable); @endphp
+                                    @if($printableItems->count() > 0)
+                                        @foreach($printableItems as $item)
+                                            <button onclick="generateAndComplete('{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}', {{ $request->id }}, '{{ $item->documentType->code }}')"
+                                               class="action-btn-generate" style="width: 100%; justify-content: center;">
                                                 <i class="bi bi-printer"></i> Print {{ $item->documentType->code }}
                                             </button>
-                                        @endif
-                                    @endforeach
+                                        @endforeach
+                                    @endif
                                 @endif
-                                
                             </div>
                         </td>
                     </tr>
