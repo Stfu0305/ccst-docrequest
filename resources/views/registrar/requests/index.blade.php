@@ -6,21 +6,49 @@
 
 <div class="registrar-sticky-header">DOCUMENT REQUESTS</div>
 
-{{-- Filter Tabs - Full width row with uniform buttons --}}
-<div class="filter-tabs-wrapper">
-    <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="all">All Requests</button>
-        <button class="filter-tab" data-filter="pending">Pending</button>
-        <button class="filter-tab" data-filter="payment_verified">Payment Verified</button>
-        <button class="filter-tab" data-filter="processing">Processing</button>
-        <button class="filter-tab" data-filter="ready_for_pickup">Ready for Pickup</button>
-        <button class="filter-tab" data-filter="received">Received</button>
-        <button class="filter-tab" data-filter="cancelled">Cancelled</button>
-    </div>
-    
-    <div class="search-box">
+<div class="search-box-wrapper" style="margin-bottom: 16px; width: 100%;">
+    <div class="search-box" style="background: white; padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); width: 100%;">
         <i class="bi bi-search"></i>
-        <input type="text" id="searchInput" placeholder="Search by reference number or student name...">
+        <input type="text" id="searchInput" placeholder="Search by reference number or student name..." style="width: 100%; border: none; padding-left: 36px; background: transparent; box-shadow: none;">
+    </div>
+</div>
+
+{{-- Stats Overview Cards acting as Filter Tabs --}}
+<div class="stats-overview-row mb-3">
+    <div class="stats-overview-card active" data-filter="all">
+        <div class="stats-overview-icon"><i class="bi bi-folder2"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $totalRequests ?? 0 }}</div>
+            <div class="stats-overview-label">All Requests</div>
+        </div>
+    </div>
+    <div class="stats-overview-card" data-filter="pending">
+        <div class="stats-overview-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $pendingCount ?? 0 }}</div>
+            <div class="stats-overview-label">Pending</div>
+        </div>
+    </div>
+    <div class="stats-overview-card" data-filter="ready_for_pickup">
+        <div class="stats-overview-icon"><i class="bi bi-box-seam"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $readyCount ?? 0 }}</div>
+            <div class="stats-overview-label">Ready for Pickup</div>
+        </div>
+    </div>
+    <div class="stats-overview-card" data-filter="received">
+        <div class="stats-overview-icon"><i class="bi bi-check2-all"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $receivedCount ?? 0 }}</div>
+            <div class="stats-overview-label">Received</div>
+        </div>
+    </div>
+    <div class="stats-overview-card" data-filter="cancelled">
+        <div class="stats-overview-icon"><i class="bi bi-x-circle" style="color: #DC3545;"></i></div>
+        <div class="stats-overview-info">
+            <div class="stats-overview-value">{{ $cancelledCount ?? 0 }}</div>
+            <div class="stats-overview-label">Cancelled</div>
+        </div>
     </div>
 </div>
 
@@ -162,44 +190,7 @@
     </div>
 </div>
 
-{{-- MOVED RIGHT PANEL CONTENT - Request Overview Stats --}}
-<div class="stats-overview-row">
-    <div class="stats-overview-card">
-        <div class="stats-overview-icon"><i class="bi bi-folder2"></i></div>
-        <div class="stats-overview-info">
-            <div class="stats-overview-value">{{ $totalRequests ?? 0 }}</div>
-            <div class="stats-overview-label">Total Requests</div>
-        </div>
-    </div>
-    <div class="stats-overview-card">
-        <div class="stats-overview-icon"><i class="bi bi-hourglass-split"></i></div>
-        <div class="stats-overview-info">
-            <div class="stats-overview-value">{{ $pendingCount ?? 0 }}</div>
-            <div class="stats-overview-label">Pending</div>
-        </div>
-    </div>
-    <div class="stats-overview-card">
-        <div class="stats-overview-icon"><i class="bi bi-gear"></i></div>
-        <div class="stats-overview-info">
-            <div class="stats-overview-value">{{ $processingCount ?? 0 }}</div>
-            <div class="stats-overview-label">Processing</div>
-        </div>
-    </div>
-    <div class="stats-overview-card">
-        <div class="stats-overview-icon"><i class="bi bi-box-seam"></i></div>
-        <div class="stats-overview-info">
-            <div class="stats-overview-value">{{ $readyCount ?? 0 }}</div>
-            <div class="stats-overview-label">Ready for Pickup</div>
-        </div>
-    </div>
-    <div class="stats-overview-card">
-        <div class="stats-overview-icon"><i class="bi bi-check2-all"></i></div>
-        <div class="stats-overview-info">
-            <div class="stats-overview-value">{{ $receivedCount ?? 0 }}</div>
-            <div class="stats-overview-label">Received</div>
-        </div>
-    </div>
-</div>
+
 
 {{-- Hidden forms for status updates --}}
 <form id="statusForm" method="POST" style="display:none;">
@@ -234,8 +225,8 @@
                 <strong>{{ $pendingCount ?? 0 }}</strong>
             </div>
             <div class="rp-stat-row">
-                <span><i class="bi bi-gear me-2"></i> Processing</span>
-                <strong>{{ $processingCount ?? 0 }}</strong>
+                <span><i class="bi bi-x-circle me-2"></i> Cancelled</span>
+                <strong>{{ $cancelledCount ?? 0 }}</strong>
             </div>
             <div class="rp-stat-row">
                 <span><i class="bi bi-box-seam me-2"></i> Ready for Pickup</span>
@@ -725,6 +716,28 @@
         align-items: center;
         gap: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .stats-overview-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    .stats-overview-card.active {
+        background: #1B6B3A;
+        color: white;
+    }
+
+    .stats-overview-card.active .stats-overview-icon,
+    .stats-overview-card.active .stats-overview-value,
+    .stats-overview-card.active .stats-overview-label {
+        color: white;
+    }
+
+    .stats-overview-card.active .stats-overview-icon i {
+        color: white !important;
     }
 
     .stats-overview-icon {
@@ -749,10 +762,10 @@
 
 @push('scripts')
 <script>
-    // Filter tabs functionality
-    document.querySelectorAll('.filter-tab').forEach(tab => {
+    // Filter tabs functionality using stats cards
+    document.querySelectorAll('.stats-overview-card').forEach(tab => {
         tab.addEventListener('click', function() {
-            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.stats-overview-card').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
             
             const filter = this.dataset.filter;

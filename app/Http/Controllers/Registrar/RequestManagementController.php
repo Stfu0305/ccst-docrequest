@@ -21,12 +21,12 @@ class RequestManagementController extends Controller
 
         $totalRequests = DocumentRequest::count();
         $pendingCount = DocumentRequest::whereIn('status', ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected'])->count();
-        $processingCount = DocumentRequest::where('status', 'processing')->count();
         $readyCount = DocumentRequest::where('status', 'ready_for_pickup')->count();
         $receivedCount = DocumentRequest::where('status', 'received')->count();
+        $cancelledCount = DocumentRequest::where('status', 'cancelled')->count();
 
         return view('registrar.requests.index', compact(
-            'requests', 'totalRequests', 'pendingCount', 'processingCount', 'readyCount', 'receivedCount'
+            'requests', 'totalRequests', 'pendingCount', 'readyCount', 'receivedCount', 'cancelledCount'
         ));
     }
 
