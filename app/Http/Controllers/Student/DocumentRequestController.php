@@ -143,11 +143,13 @@ class DocumentRequestController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function show($id)
     {
-        $docRequest = DocumentRequest::with(['items.documentType'])
+        $docRequest = DocumentRequest::with(['items.documentType', 'paymentProof'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        return view('student.requests.show', compact('docRequest'));
+        $paymentSettings = \App\Models\PaymentSetting::where('is_active', true)->get()->keyBy('method');
+
+        return view('student.requests.show', compact('docRequest', 'paymentSettings'));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

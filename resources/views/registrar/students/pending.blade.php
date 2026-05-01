@@ -38,9 +38,9 @@
                                 <button type="button" class="btn-view-id" onclick="viewId({{ $student->id }})">
                                     <i class="bi bi-card-image"></i> ID
                                 </button>
-                                <a href="{{ route('registrar.students.verify', $student->id) }}" class="btn-verify">
+                                <button type="button" class="btn-verify" onclick="confirmVerify({{ $student->id }})">
                                     <i class="bi bi-check-circle"></i> Verify
-                                </a>
+                                </button>
                                 <button type="button" class="btn-reject" onclick="confirmReject({{ $student->id }})">
                                     <i class="bi bi-x-circle"></i> Reject
                                 </button>
@@ -71,6 +71,11 @@
 <form id="rejectForm" method="POST" style="display:none;">
     @csrf
     @method('DELETE')
+</form>
+
+<form id="verifyForm" method="POST" style="display:none;">
+    @csrf
+    @method('PATCH')
 </form>
 
 @endsection
@@ -276,6 +281,26 @@
             if (result.isConfirmed) {
                 const form = document.getElementById('rejectForm');
                 form.action = `/registrar/students/${id}/reject`;
+                form.submit();
+            }
+        });
+    }
+
+    // Confirm verify
+    function confirmVerify(id) {
+        Swal.fire({
+            title: 'Verify Student Registration?',
+            text: 'This will approve the student account and allow them to request documents.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1B6B3A',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Verify',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.getElementById('verifyForm');
+                form.action = `/registrar/students/${id}/verify`;
                 form.submit();
             }
         });
