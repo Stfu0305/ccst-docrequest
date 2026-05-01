@@ -131,50 +131,17 @@
                                 </a>
                                 
                                 {{-- Generate Document Button (for printable documents) --}}
-                                @if($request->status === 'payment_verified' || $request->status === 'ready_for_pickup')
+                                @if(in_array($request->status, ['pending', 'payment_verified', 'ready_for_pickup']))
                                     @foreach($request->items as $item)
                                         @if($item->documentType->is_printable)
-                                            <a href="{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}" 
-                                               class="action-btn-generate" target="_blank">
-                                                <i class="bi bi-file-pdf"></i> Generate {{ $item->documentType->code }}
-                                            </a>
+                                            <button onclick="generateAndComplete('{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}', {{ $request->id }}, '{{ $item->documentType->code }}')" 
+                                               class="action-btn-generate">
+                                                <i class="bi bi-printer"></i> Print {{ $item->documentType->code }}
+                                            </button>
                                         @endif
                                     @endforeach
                                 @endif
                                 
-                                {{-- Status Dropdown --}}
-                                @if(!in_array($request->status, ['received', 'cancelled']))
-                                <div class="status-dropdown">
-                                    <button class="action-btn-status" onclick="toggleStatusDropdown({{ $request->id }})">
-                                        <i class="bi bi-arrow-repeat"></i> Status
-                                    </button>
-                                    <div class="status-dropdown-menu" id="status-dropdown-{{ $request->id }}">
-                                        @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected', 'payment_verified']))
-                                            <button onclick="updateStatus({{ $request->id }}, 'processing')" class="status-option">
-                                                <i class="bi bi-gear"></i> Start Processing
-                                            </button>
-                                        @endif
-                                        
-                                        @if($request->status === 'processing')
-                                            <button onclick="updateStatus({{ $request->id }}, 'ready_for_pickup')" class="status-option">
-                                                <i class="bi bi-box-seam"></i> Ready for Pickup
-                                            </button>
-                                        @endif
-                                        
-                                        @if($request->status === 'ready_for_pickup')
-                                            <button onclick="markReceived({{ $request->id }}, '{{ $request->claiming_number }}')" class="status-option">
-                                                <i class="bi bi-check2-all"></i> Mark as Received
-                                            </button>
-                                        @endif
-                                        
-                                        @if(!in_array($request->status, ['received', 'cancelled']))
-                                            <button onclick="updateStatus({{ $request->id }}, 'cancelled')" class="status-option status-cancel">
-                                                <i class="bi bi-x-circle"></i> Cancel Request
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-                                @endif
                             </div>
                         </td>
                     </tr>
@@ -824,8 +791,8 @@
     function updateStatus(requestId, newStatus) {
         let statusText = '';
         switch(newStatus) {
-            case 'processing': 
-                statusText = 'start processing this request'; 
+            case 'completed': 
+                statusText = 'mark this request as completed'; 
                 break;
             case 'ready_for_pickup': 
                 statusText = 'mark this request as ready for pickup'; 
@@ -884,6 +851,31 @@
             if (result.isConfirmed) {
                 const form = document.getElementById('receivedForm');
                 form.action = `/registrar/requests/${requestId}/received`;
+                form.submit();
+            }
+        });
+    }
+
+    // Generate Document and Mark Completed
+    function generateAndComplete(url, id, docName) {
+        Swal.fire({
+            title: `Print ${docName}?`,
+            text: 'This will generate the document. Once printed and given to the student, this request will be automatically marked as COMPLETED.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1B6B3A',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, print and complete',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Open PDF in new tab
+                window.open(url, '_blank');
+                
+                // Mark as completed
+                const form = document.getElementById('statusForm');
+                form.action = `/registrar/requests/${id}/status`;
+                document.getElementById('statusValue').value = 'completed';
                 form.submit();
             }
         });

@@ -101,32 +101,25 @@
 
         {{-- Action Buttons --}}
         <div class="action-buttons">
-            {{-- Mark as Paid --}}
-            @if($request->payment_status === 'unpaid' && !in_array($request->status, ['cancelled']))
-                <button onclick="openMarkPaidModal()" class="btn-action btn-paid">
-                    <i class="bi bi-cash-stack"></i> Mark as Paid
-                </button>
+            {{-- Print Document Buttons (auto-marks as completed + paid) --}}
+            @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected', 'payment_verified', 'ready_for_pickup']))
+                @foreach($request->items as $item)
+                    @if($item->documentType->is_printable)
+                        <button onclick="generateAndComplete('{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}', {{ $request->id }}, '{{ $item->documentType->code }}')" 
+                           class="btn-action btn-processing">
+                            <i class="bi bi-printer"></i> Print {{ $item->documentType->code }}
+                        </button>
+                    @endif
+                @endforeach
             @endif
 
-            @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected', 'payment_verified']))
-                <button onclick="updateStatus({{ $request->id }}, 'processing')" class="btn-action btn-processing">
-                    <i class="bi bi-gear"></i> Start Processing
-                </button>
-            @endif
-            
-            @if($request->status === 'processing')
-                <button onclick="updateStatus({{ $request->id }}, 'ready_for_pickup')" class="btn-action btn-ready">
-                    <i class="bi bi-box-seam"></i> Ready for Pickup
-                </button>
-            @endif
-            
             @if($request->status === 'ready_for_pickup')
                 <button onclick="markReceived({{ $request->id }})" class="btn-action btn-received">
                     <i class="bi bi-check2-all"></i> Mark as Received
                 </button>
             @endif
             
-            @if(!in_array($request->status, ['received', 'cancelled']))
+            @if(!in_array($request->status, ['received', 'cancelled', 'completed']))
                 <button onclick="updateStatus({{ $request->id }}, 'cancelled')" class="btn-action btn-cancelled">
                     <i class="bi bi-x-circle"></i> Cancel Request
                 </button>
@@ -153,42 +146,6 @@
     @method('PATCH')
 </form>
 
-<form id="markPaidForm" method="POST" action="{{ route('registrar.requests.markAsPaid', $request->id) }}" style="display:none;">
-    @csrf
-    @method('PATCH')
-    <input type="hidden" name="receipt_number" id="receiptNumberInput">
-    <input type="hidden" name="cashier_name" id="cashierNameInput">
-</form>
-
-{{-- Mark as Paid Modal --}}
-<div id="markPaidModal" class="modal-overlay" style="display:none;">
-    <div class="modal-container">
-        <div class="modal-header">
-            <h4><i class="bi bi-cash-stack me-2"></i>Mark as Paid</h4>
-            <button class="modal-close" onclick="closeMarkPaidModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p style="font-size:0.88rem; color:#555; margin-bottom:16px;">
-                Record that payment of <strong style="color:#1B6B3A;">₱{{ number_format($request->total_fee, 2) }}</strong> has been received from the student.
-            </p>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:0.78rem; font-weight:700; color:#555; text-transform:uppercase;">Receipt Number <span style="color:#DC3545;">*</span></label>
-                <input type="text" id="receiptNumberField" placeholder="e.g. OR-2024-00123"
-                    style="width:100%; padding:8px 12px; border:1px solid #D0DDD0; border-radius:6px; font-family:'Poppins',sans-serif; font-size:0.85rem; margin-top:4px;">
-            </div>
-            <div>
-                <label style="font-size:0.78rem; font-weight:700; color:#555; text-transform:uppercase;">Cashier Name (Optional)</label>
-                <input type="text" id="cashierNameField" placeholder="e.g. Maria Santos"
-                    style="width:100%; padding:8px 12px; border:1px solid #D0DDD0; border-radius:6px; font-family:'Poppins',sans-serif; font-size:0.85rem; margin-top:4px;">
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-cancel-modal" onclick="closeMarkPaidModal()">Cancel</button>
-            <button class="btn-confirm-paid" onclick="submitMarkPaid()"><i class="bi bi-check-circle me-1"></i>Confirm Payment</button>
-        </div>
-    </div>
-</div>
-
 @endsection
 
 @section('right-panel')
@@ -203,11 +160,11 @@
         <div class="ccst-card-body p-0">
             <div class="rp-guide-step">
                 <span class="rp-step-num">1</span>
-                <span>Start processing when requirements are met</span>
+                <span>Print document to automatically mark request as completed</span>
             </div>
             <div class="rp-guide-step">
                 <span class="rp-step-num">2</span>
-                <span>Mark ready when documents are printed</span>
+                <span>For non-printable, mark ready when documents are prepared</span>
             </div>
             <div class="rp-guide-step" style="border-bottom:none;">
                 <span class="rp-step-num">3</span>
@@ -438,10 +395,10 @@
         let confirmColor = '#1B6B3A';
         
         switch(status) {
-            case 'processing':
-                title = 'Start Processing?';
-                text = 'This will notify the student that their documents are being processed.';
-                confirmColor = '#1A9FE0';
+            case 'completed':
+                title = 'Mark as Completed?';
+                text = 'This will mark the request as completed and record the payment as paid.';
+                confirmColor = '#1B6B3A';
                 break;
             case 'ready_for_pickup':
                 title = 'Ready for Pickup?';
@@ -493,27 +450,31 @@
         });
     }
 
-    function openMarkPaidModal() {
-        document.getElementById('receiptNumberField').value = '';
-        document.getElementById('cashierNameField').value = '';
-        document.getElementById('markPaidModal').style.display = 'flex';
+    // Generate Document and Mark Completed
+    function generateAndComplete(url, id, docName) {
+        Swal.fire({
+            title: `Print ${docName}?`,
+            text: 'This will generate the document. Once printed and given to the student, this request will be automatically marked as COMPLETED.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1B6B3A',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, print and complete',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Open PDF in new tab
+                window.open(url, '_blank');
+                
+                // Mark as completed
+                const form = document.getElementById('statusForm');
+                form.action = `/registrar/requests/${id}/status`;
+                document.getElementById('statusValue').value = 'completed';
+                form.submit();
+            }
+        });
     }
 
-    function closeMarkPaidModal() {
-        document.getElementById('markPaidModal').style.display = 'none';
-    }
-
-    function submitMarkPaid() {
-        const receipt = document.getElementById('receiptNumberField').value.trim();
-        if (!receipt) {
-            Swal.fire('Required', 'Please enter the receipt number.', 'warning');
-            return;
-        }
-        document.getElementById('receiptNumberInput').value = receipt;
-        document.getElementById('cashierNameInput').value = document.getElementById('cashierNameField').value.trim();
-        closeMarkPaidModal();
-        document.getElementById('markPaidForm').submit();
-    }
 
     function updateTime() {
         const now = new Date();

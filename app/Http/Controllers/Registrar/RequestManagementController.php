@@ -46,14 +46,14 @@ class RequestManagementController extends Controller
 
         // Define allowed status transitions
         $allowedTransitions = [
-            'pending' => ['processing', 'cancelled'],
-            'payment_method_set' => ['processing', 'cancelled'],
-            'payment_uploaded' => ['processing', 'cancelled'],
-            'payment_rejected' => ['processing', 'cancelled'],
-            'payment_verified' => ['processing', 'cancelled'],
-            'processing' => ['ready_for_pickup', 'cancelled'],
-            'ready_for_pickup' => ['received', 'cancelled'],
+            'pending' => ['ready_for_pickup', 'completed', 'cancelled'],
+            'payment_method_set' => ['ready_for_pickup', 'completed', 'cancelled'],
+            'payment_uploaded' => ['ready_for_pickup', 'completed', 'cancelled'],
+            'payment_rejected' => ['ready_for_pickup', 'completed', 'cancelled'],
+            'payment_verified' => ['ready_for_pickup', 'completed', 'cancelled'],
+            'ready_for_pickup' => ['received', 'completed', 'cancelled'],
             'received' => [],
+            'completed' => [],
             'cancelled' => [],
         ];
 
@@ -76,6 +76,12 @@ class RequestManagementController extends Controller
             } else {
                 $claimingNumber = $docRequest->claiming_number;
             }
+        }
+
+        // Auto-mark payment if completed
+        if ($newStatus === 'completed') {
+            $docRequest->payment_status = 'paid';
+            $docRequest->paid_at = $docRequest->paid_at ?? now();
         }
 
         $docRequest->status = $newStatus;
