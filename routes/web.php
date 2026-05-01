@@ -134,6 +134,7 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::get('/requests/{id}', 'show')->name('requests.show');
         Route::patch('/requests/{id}/status', 'updateStatus')->name('requests.updateStatus');
         Route::patch('/requests/{id}/received', 'markReceived')->name('requests.markReceived');
+        Route::patch('/requests/{id}/mark-paid', 'markAsPaid')->name('requests.markAsPaid');
     });
 
     // ── Appointments Management ─────────────────────────────────────────

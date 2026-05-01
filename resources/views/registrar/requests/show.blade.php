@@ -41,6 +41,39 @@
             </div>
         </div>
 
+        {{-- Payment Status --}}
+        <div class="detail-section">
+            <h3><i class="bi bi-credit-card me-2"></i>Payment Details</h3>
+            <div class="detail-grid">
+                <div>
+                    <label>Payment Status:</label>
+                    @if($request->payment_status === 'paid')
+                        <span class="status-badge status-received"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
+                    @else
+                        <span class="status-badge status-pending"><i class="bi bi-clock me-1"></i>Unpaid</span>
+                    @endif
+                </div>
+                <div><label>Payment Method:</label>
+                    <strong>
+                        @if($request->payment_method === 'gcash') GCash
+                        @elseif($request->payment_method === 'bank_transfer') Bank Transfer
+                        @elseif($request->payment_method === 'cash') Over-the-Counter Cash
+                        @else —
+                        @endif
+                    </strong>
+                </div>
+                @if($request->receipt_number)
+                    <div><label>Receipt No.:</label> <strong>{{ $request->receipt_number }}</strong></div>
+                @endif
+                @if($request->cashier_name)
+                    <div><label>Cashier:</label> <strong>{{ $request->cashier_name }}</strong></div>
+                @endif
+                @if($request->paid_at)
+                    <div><label>Paid At:</label> <strong>{{ $request->paid_at->format('M d, Y h:i A') }}</strong></div>
+                @endif
+            </div>
+        </div>
+
         {{-- Requested Documents --}}
         <div class="detail-section">
             <h3><i class="bi bi-file-earmark-text me-2"></i>Requested Documents</h3>
@@ -68,6 +101,13 @@
 
         {{-- Action Buttons --}}
         <div class="action-buttons">
+            {{-- Mark as Paid --}}
+            @if($request->payment_status === 'unpaid' && !in_array($request->status, ['cancelled']))
+                <button onclick="openMarkPaidModal()" class="btn-action btn-paid">
+                    <i class="bi bi-cash-stack"></i> Mark as Paid
+                </button>
+            @endif
+
             @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected', 'payment_verified']))
                 <button onclick="updateStatus({{ $request->id }}, 'processing')" class="btn-action btn-processing">
                     <i class="bi bi-gear"></i> Start Processing
@@ -112,6 +152,42 @@
     @csrf
     @method('PATCH')
 </form>
+
+<form id="markPaidForm" method="POST" action="{{ route('registrar.requests.markAsPaid', $request->id) }}" style="display:none;">
+    @csrf
+    @method('PATCH')
+    <input type="hidden" name="receipt_number" id="receiptNumberInput">
+    <input type="hidden" name="cashier_name" id="cashierNameInput">
+</form>
+
+{{-- Mark as Paid Modal --}}
+<div id="markPaidModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h4><i class="bi bi-cash-stack me-2"></i>Mark as Paid</h4>
+            <button class="modal-close" onclick="closeMarkPaidModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.88rem; color:#555; margin-bottom:16px;">
+                Record that payment of <strong style="color:#1B6B3A;">₱{{ number_format($request->total_fee, 2) }}</strong> has been received from the student.
+            </p>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.78rem; font-weight:700; color:#555; text-transform:uppercase;">Receipt Number <span style="color:#DC3545;">*</span></label>
+                <input type="text" id="receiptNumberField" placeholder="e.g. OR-2024-00123"
+                    style="width:100%; padding:8px 12px; border:1px solid #D0DDD0; border-radius:6px; font-family:'Poppins',sans-serif; font-size:0.85rem; margin-top:4px;">
+            </div>
+            <div>
+                <label style="font-size:0.78rem; font-weight:700; color:#555; text-transform:uppercase;">Cashier Name (Optional)</label>
+                <input type="text" id="cashierNameField" placeholder="e.g. Maria Santos"
+                    style="width:100%; padding:8px 12px; border:1px solid #D0DDD0; border-radius:6px; font-family:'Poppins',sans-serif; font-size:0.85rem; margin-top:4px;">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel-modal" onclick="closeMarkPaidModal()">Cancel</button>
+            <button class="btn-confirm-paid" onclick="submitMarkPaid()"><i class="bi bi-check-circle me-1"></i>Confirm Payment</button>
+        </div>
+    </div>
+</div>
 
 @endsection
 
@@ -246,6 +322,38 @@
     .btn-ready { background: #F5C518; color: #1A1A1A; }
     .btn-received { background: #1B6B3A; }
     .btn-cancelled { background: #DC3545; }
+    .btn-paid { background: #6f42c1; }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed; top:0; left:0; right:0; bottom:0;
+        background: rgba(0,0,0,0.5); z-index:1000;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .modal-container {
+        background: white; border-radius: 12px; width: 90%; max-width: 460px;
+        overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+        background: #6f42c1; color: white; padding: 15px 20px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h4 { margin: 0; font-size: 1rem; }
+    .modal-close { background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; }
+    .modal-body { padding: 20px; }
+    .modal-footer {
+        padding: 15px 20px; display: flex; justify-content: flex-end;
+        gap: 10px; border-top: 1px solid #f0f0f0;
+    }
+    .btn-cancel-modal {
+        background: #f0f0f0; border: none; padding: 8px 20px;
+        border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif;
+    }
+    .btn-confirm-paid {
+        background: #6f42c1; color: white; border: none; padding: 8px 20px;
+        border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+    }
 
     .btn-back {
         display: inline-flex;
@@ -369,7 +477,7 @@
     function markReceived(id) {
         Swal.fire({
             title: 'Mark as Received?',
-            text: 'This confirms the student has claimed their documents. This action cannot be undone.',
+            text: 'This confirms the student has claimed their documents. Payment will be automatically recorded. This action cannot be undone.',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#1B6B3A',
@@ -383,6 +491,28 @@
                 form.submit();
             }
         });
+    }
+
+    function openMarkPaidModal() {
+        document.getElementById('receiptNumberField').value = '';
+        document.getElementById('cashierNameField').value = '';
+        document.getElementById('markPaidModal').style.display = 'flex';
+    }
+
+    function closeMarkPaidModal() {
+        document.getElementById('markPaidModal').style.display = 'none';
+    }
+
+    function submitMarkPaid() {
+        const receipt = document.getElementById('receiptNumberField').value.trim();
+        if (!receipt) {
+            Swal.fire('Required', 'Please enter the receipt number.', 'warning');
+            return;
+        }
+        document.getElementById('receiptNumberInput').value = receipt;
+        document.getElementById('cashierNameInput').value = document.getElementById('cashierNameField').value.trim();
+        closeMarkPaidModal();
+        document.getElementById('markPaidForm').submit();
     }
 
     function updateTime() {
