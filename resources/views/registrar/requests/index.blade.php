@@ -130,8 +130,8 @@
                                     <i class="bi bi-eye"></i> View
                                 </a>
                                 
-                                {{-- Generate Document Button (for printable documents) --}}
-                                @if(in_array($request->status, ['pending', 'payment_verified', 'ready_for_pickup']))
+                                {{-- Print Document Button (for printable documents) --}}
+                                @if(!in_array($request->status, ['completed', 'cancelled', 'received']))
                                     @foreach($request->items as $item)
                                         @if($item->documentType->is_printable)
                                             <button onclick="generateAndComplete('{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}', {{ $request->id }}, '{{ $item->documentType->code }}')" 
