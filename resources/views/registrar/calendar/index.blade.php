@@ -126,12 +126,6 @@
 @endsection
 
 @section('right-panel')
-    <div class="rp-date-card">
-        <div class="rp-date-day">{{ now()->format('d') }}</div>
-        <div class="rp-date-month">{{ now()->format('F Y') }}</div>
-        <div class="rp-date-time" id="live-time">--:-- --</div>
-    </div>
-
     <div class="ccst-card mb-0">
         <div class="ccst-card-header blue" style="display: flex; justify-content: space-between; align-items: center;">
             <span><i class="bi bi-clock-history me-2"></i> Time Slots</span>
@@ -557,15 +551,7 @@
     .status-missed { background: #F8D7DA; color: #721C24; }
     .status-cancelled { background: #F0F0F0; color: #888; }
 
-    .rp-date-card {
-        background: rgba(255,255,255,0.18);
-        border-radius: 12px;
-        padding: 16px;
-        text-align: center;
-        color: white;
-        backdrop-filter: blur(8px);
-        margin-bottom: 18px;
-    }
+   
 
     .rp-stat-row {
         display: flex;

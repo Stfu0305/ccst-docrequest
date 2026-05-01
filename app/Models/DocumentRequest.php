@@ -96,11 +96,6 @@ class DocumentRequest extends Model
         return $this->hasMany(StatusLog::class);
     }
 
-    public function paymentProof()
-    {
-        return $this->hasOne(PaymentProof::class);
-    }
-
     // Scopes
     public function scopePending($query)
     {

@@ -207,12 +207,7 @@
 @endsection
 
 @section('right-panel')
-    <div class="rp-date-card">
-        <div class="rp-date-day">{{ now()->format('d') }}</div>
-        <div class="rp-date-month">{{ now()->format('F Y') }}</div>
-        <div class="rp-date-time" id="live-time">--:-- --</div>
-    </div>
-
+    
     <div class="ccst-card mb-0">
         <div class="ccst-card-header blue">Request Overview</div>
         <div class="ccst-card-body p-0">
@@ -609,37 +604,9 @@
         color: white;
     }
 
-    .rp-date-card {
-        border-radius: 10px;
-        padding: 16px;
-        text-align: center;
-        color: white;
-        backdrop-filter: blur(8px);
-        margin-bottom: 10px;
-    }
+    
 
-    .rp-date-day {
-        font-size: 3.25rem;
-        font-weight: 700;
-        line-height: 1;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        margin-top: 20px;
-    }
-
-    .rp-date-month {
-        font-size: 1.25rem;
-        opacity: 0.85;
-        margin-top: 2px;
-    }
-
-    .rp-date-time {
-        font-size: 1.50rem;
-        font-weight: 600;
-        margin-top: 6px;
-        opacity: 0.9;
-        letter-spacing: 1px;
-    }
-
+    
     .rp-guide-step {
         display: flex;
         align-items: flex-start;

@@ -122,6 +122,8 @@ class RequestManagementController extends Controller
         }
 
         $docRequest->status = 'received';
+        $docRequest->payment_status = 'paid';
+        $docRequest->paid_at = $docRequest->paid_at ?? now();
         $docRequest->save();
 
         // Update appointment if exists
@@ -156,6 +158,54 @@ class RequestManagementController extends Controller
         session()->flash('check_notifications', true);
 
         return redirect()->route('registrar.requests.index');
+    }
+
+    public function markAsPaid(Request $request, $id)
+    {
+        $docRequest = DocumentRequest::findOrFail($id);
+
+        if ($docRequest->payment_status === 'paid') {
+            $message = "ℹ️ Request {$docRequest->reference_number} is already marked as paid.";
+            $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $docRequest->id));
+            session()->flash('check_notifications', true);
+            return redirect()->back();
+        }
+
+        $receiptNumber = $request->input('receipt_number');
+        $cashierName = $request->input('cashier_name');
+
+        $docRequest->update([
+            'payment_status' => 'paid',
+            'paid_at'        => now(),
+            'receipt_number' => $receiptNumber,
+            'cashier_name'   => $cashierName,
+        ]);
+
+        // Log it
+        StatusLog::create([
+            'document_request_id' => $docRequest->id,
+            'changed_by'          => Auth::id(),
+            'old_status'          => $docRequest->status,
+            'new_status'          => $docRequest->status,
+            'notes'               => "Payment marked as PAID by registrar. Receipt: {$receiptNumber}",
+        ]);
+
+        // Notify student
+        $student = $docRequest->user;
+        if ($student) {
+            $message = "💰 Payment for your request {$docRequest->reference_number} has been confirmed. Receipt No: {$receiptNumber}.";
+            $url = route('student.requests.history');
+            $this->sendNotification($student, $message, $url);
+        }
+
+        // Notify registrar
+        $this->sendNotificationToCurrentUser(
+            "✅ Request {$docRequest->reference_number} marked as PAID. Receipt: {$receiptNumber}",
+            route('registrar.requests.show', $docRequest->id)
+        );
+        session()->flash('check_notifications', true);
+
+        return redirect()->back()->with('success', 'Payment marked as paid successfully.');
     }
 
     public function serveProof($id)
