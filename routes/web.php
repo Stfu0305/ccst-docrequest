@@ -204,6 +204,7 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar');
     Route::get('/calendar/appointments', [CalendarController::class, 'getAppointments'])->name('calendar.appointments');
     Route::get('/calendar/time-slots', [CalendarController::class, 'getTimeSlots'])->name('calendar.time-slots');
+    Route::get('/calendar/requests-by-date', [CalendarController::class, 'getRequestsByDate'])->name('calendar.requests-by-date');
     Route::patch('/calendar/appointments/{id}/reschedule', [CalendarController::class, 'reschedule'])->name('calendar.reschedule');
 
     

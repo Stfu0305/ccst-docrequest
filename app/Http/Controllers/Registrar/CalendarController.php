@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Registrar;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\DocumentRequest;
 use App\Models\TimeSlot;
 use App\Traits\SendsDatabaseNotifications;
 use Carbon\Carbon;
@@ -23,6 +24,85 @@ class CalendarController extends Controller
             ->get();
 
         return view('registrar.calendar.index', compact('timeSlots'));
+    }
+
+    /**
+     * Get document requests grouped by date for calendar dots
+     */
+    public function getRequestsByDate(Request $request)
+    {
+        $start = Carbon::parse($request->start)->startOfDay();
+        $end   = Carbon::parse($request->end)->endOfDay();
+
+        $status = $request->input('status', 'all');
+        $search = trim($request->input('search', ''));
+
+        $requests = DocumentRequest::with('user:id,first_name,last_name,student_number')
+            ->whereBetween('created_at', [$start, $end]);
+
+        if ($status !== 'all') {
+            $statusMap = [
+                'pending' => ['pending'],
+                'approved' => ['payment_method_set', 'payment_uploaded', 'payment_verified', 'processing'],
+                'processing' => ['processing'],
+                'ready_for_pickup' => ['ready_for_pickup'],
+                'completed' => ['completed'],
+                'declined' => ['cancelled', 'payment_rejected'],
+            ];
+
+            $statuses = $statusMap[$status] ?? [$status];
+            $requests->whereIn('status', $statuses);
+        }
+
+        if ($search !== '') {
+            $requests->where(function ($query) use ($search) {
+                $query->where('reference_number', 'like', "%{$search}%")
+                    ->orWhere('student_number', 'like', "%{$search}%")
+                    ->orWhere('full_name', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        $requests = $requests->get();
+
+        // Group by date (Y-m-d of created_at)
+        $grouped = [];
+        foreach ($requests as $req) {
+            $date = Carbon::parse($req->created_at)->format('Y-m-d');
+            if (!isset($grouped[$date])) {
+                $grouped[$date] = [
+                    'date'       => $date,
+                    'pending'    => [],
+                    'approved'   => [],
+                    'processing' => [],
+                    'ready'      => [],
+                    'completed'  => [],
+                    'declined'   => [],
+                ];
+            }
+
+            $name = trim(($req->user->first_name ?? '') . ' ' . ($req->user->last_name ?? ''));
+            $sn   = $req->user->student_number ?? 'N/A';
+            $entry = [
+                'name' => $name ?: $req->full_name,
+                'ref' => $req->reference_number,
+                'sn' => $sn,
+                'status' => $req->status,
+            ];
+
+            $key = match ($req->status) {
+                'pending', 'payment_method_set', 'payment_uploaded', 'payment_verified' => 'pending',
+                'processing' => 'processing',
+                'ready_for_pickup' => 'ready',
+                'completed' => 'completed',
+                'cancelled', 'payment_rejected' => 'declined',
+                default => 'pending',
+            };
+
+            $grouped[$date][$key][] = $entry;
+        }
+
+        return response()->json(array_values($grouped));
     }
 
     /**

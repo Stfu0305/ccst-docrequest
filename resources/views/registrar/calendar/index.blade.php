@@ -5,11 +5,49 @@
 @section('content')
 
 <div class="calendar-header">
-    <h1 class="calendar-title">Appointment Calendar</h1>
+    <div class="calendar-title-section">
+        <h1 class="calendar-title">Appointment Calendar</h1>
+    </div>
     <div class="calendar-actions">
         <button class="btn-print-list" onclick="window.open('{{ route('registrar.appointments.print-cashier-list') }}', '_blank')">
             <i class="bi bi-printer"></i> Print Cashier List
         </button>
+    </div>
+</div>
+
+<div class="calendar-filters">
+    <div class="filter-chip-row">
+        <button type="button" class="filter-chip active" data-status="all">All</button>
+        <button type="button" class="filter-chip pending" data-status="pending">Pending</button>
+        <button type="button" class="filter-chip approved" data-status="approved">Approved</button>
+        <button type="button" class="filter-chip processing" data-status="processing">Processing</button>
+        <button type="button" class="filter-chip ready" data-status="ready_for_pickup">Ready for Pickup</button>
+        <button type="button" class="filter-chip completed" data-status="completed">Completed</button>
+        <button type="button" class="filter-chip declined" data-status="declined">Declined</button>
+    </div>
+    <div class="filter-controls">
+        <div class="year-month-selector">
+            <select id="calendarYearSelect" class="year-select">
+                <!-- Years will be populated by JS -->
+            </select>
+            <select id="calendarMonthSelect" class="month-select">
+                <option value="0">January</option>
+                <option value="1">February</option>
+                <option value="2">March</option>
+                <option value="3">April</option>
+                <option value="4">May</option>
+                <option value="5">June</option>
+                <option value="6">July</option>
+                <option value="7">August</option>
+                <option value="8">September</option>
+                <option value="9">October</option>
+                <option value="10">November</option>
+                <option value="11">December</option>
+            </select>
+        </div>
+        <div class="filter-search">
+            <input id="calendarSearchInput" type="search" placeholder="Search student name, ref, status..." autocomplete="off">
+        </div>
     </div>
 </div>
 
@@ -69,6 +107,22 @@
     @method('PATCH')
 </form>
 
+{{-- Day Detail Modal --}}
+<div id="dayModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width:520px;">
+        <div class="modal-header-custom" style="background:#1B6B3A;">
+            <h4><i class="bi bi-calendar3 me-2"></i><span id="dayModalTitle">Requests</span></h4>
+            <button type="button" class="modal-close" onclick="closeDayModal()">&times;</button>
+        </div>
+        <div class="modal-body-custom" style="max-height:420px;overflow-y:auto;" id="dayModalBody">
+            <p class="text-muted">Loading...</p>
+        </div>
+        <div class="modal-footer-custom">
+            <button type="button" class="btn-cancel-modal" onclick="closeDayModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('right-panel')
@@ -93,22 +147,16 @@
     <div class="ccst-card mb-0">
         <div class="ccst-card-header yellow">Legend</div>
         <div class="ccst-card-body p-0">
-            <div class="legend-item">
-                <span class="legend-color" style="background: #F5C518;"></span>
-                <span>Scheduled</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #1B6B3A;"></span>
-                <span>Completed</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #DC3545;"></span>
-                <span>Missed</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-color" style="background: #AAAAAA;"></span>
-                <span>Cancelled</span>
-            </div>
+            <div class="legend-item"><span class="legend-color" style="background:#F5C518;"></span><span>Scheduled Appt.</span></div>
+            <div class="legend-item"><span class="legend-color" style="background:#1B6B3A;"></span><span>Completed Appt.</span></div>
+            <div class="legend-item"><span class="legend-color" style="background:#DC3545;"></span><span>Missed Appt.</span></div>
+            <div class="legend-item"><span class="legend-color" style="background:#AAAAAA;"></span><span>Cancelled Appt.</span></div>
+            <div style="padding:8px 14px;font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.4px;margin-top:4px;">Request Dots</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#DC3545;"></span><span>Pending Requests</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#F97316;"></span><span>Processing / Approved</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span><span>Ready for Pickup</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span><span>Completed Requests</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#6B7280;"></span><span>Declined Requests</span></div>
         </div>
     </div>
 
@@ -203,12 +251,135 @@
         margin-bottom: 20px;
     }
 
+    .calendar-title-section {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
     .calendar-title {
         font-family: 'Volkhov', serif;
         font-size: 1.5rem;
         font-weight: 700;
         color: #1A1A1A;
         margin: 0;
+    }
+
+    .calendar-user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+
+    .user-avatar-small {
+        display: none;
+    }
+
+    .user-avatar-small img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .user-display-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1A1A1A;
+    }
+
+    .calendar-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 18px;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .filter-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .filter-chip {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(26, 159, 224, 0.2);
+        background: #f5f8ff;
+        color: #1A1A1A;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-chip.active,
+    .filter-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .filter-chip.pending { background: #FEE2E2; border-color: #FECACA; color: #991B1B; }
+    .filter-chip.approved { background: #FFF7ED; border-color: #FED7AA; color: #C2410C; }
+    .filter-chip.processing { background: #FEF3C7; border-color: #FDE68A; color: #92400E; }
+    .filter-chip.ready { background: #DCFCE7; border-color: #BBF7D0; color: #166534; }
+    .filter-chip.completed { background: #DBEAFE; border-color: #BFDBFE; color: #1D4ED8; }
+    .filter-chip.declined { background: #E5E7EB; border-color: #D1D5DB; color: #374151; }
+
+    .filter-search {
+        min-width: 320px;
+        flex: 1 1 320px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .filter-search input {
+        width: 100%;
+        max-width: 360px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid #D1D5DB;
+        font-size: 0.9rem;
+        outline: none;
+    }
+
+    .filter-search input:focus {
+        border-color: #1A9FE0;
+        box-shadow: 0 0 0 4px rgba(26, 159, 224, 0.12);
+    }
+
+    .filter-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex: 1;
+        justify-content: flex-end;
+    }
+
+    .year-month-selector {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .year-select, .month-select {
+        padding: 8px 12px;
+        border: 1px solid #D1D5DB;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-family: 'Poppins', sans-serif;
+        background: white;
+        min-width: 100px;
+    }
+
+    .year-select {
+        min-width: 80px;
     }
 
     .btn-print-list {
@@ -230,6 +401,11 @@
         border-radius: 16px;
         padding: 20px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        min-height: 600px;
+    }
+
+    #calendar {
+        min-height: 560px;
     }
 
     /* FullCalendar Customization */
@@ -237,10 +413,28 @@
         font-family: 'Poppins', sans-serif;
     }
 
+    .fc-toolbar {
+        display: flex;
+        justify-content: center;
+    }
+
+    .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .fc-toolbar-chunk:first-child,
+    .fc-toolbar-chunk:last-child {
+        display: none;
+    }
+
     .fc-toolbar-title {
         font-size: 1.2rem;
         font-weight: 700;
         color: #1B6B3A;
+        margin: 0 auto;
+        width: auto;
     }
 
     .fc-button-primary {
@@ -569,7 +763,92 @@
         cursor: pointer;
         font-weight: 600;
     }
-    
+
+    /* Request dot indicators on calendar cells */
+    .req-dot-bar {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+        padding: 4px 5px 2px;
+        justify-content: flex-start;
+        margin-top: 2px;
+    }
+    .req-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .request-summary-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 4px;
+    }
+    .request-summary-badge {
+        display: inline-block;
+        font-size: 0.62rem;
+        padding: 2px 5px;
+        border-radius: 999px;
+        color: white;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+    .request-summary-pending { background: #DC3545; }
+    .request-summary-processing { background: #F97316; }
+    .request-summary-ready   { background: #22c55e; }
+    .request-summary-completed { background: #3B82F6; }
+    .request-summary-declined { background: #6B7280; }
+    .calendar-error {
+        padding: 30px;
+        text-align: center;
+        color: #4B5563;
+        font-size: 0.95rem;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+        background: #FAFAFA;
+        margin: 10px 0;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    /* Day modal student list */
+    .day-status-section { margin-bottom: 16px; }
+    .day-status-title {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
+    .day-status-title.pending    { background:#FEE2E2; color:#991B1B; }
+    .day-status-title.processing { background:#FEF3C7; color:#92400E; }
+    .day-status-title.ready      { background:#DCFCE7; color:#166534; }
+    .day-status-title.done       { background:#DBEAFE; color:#1D4ED8; }
+    .day-status-title.declined   { background:#E5E7EB; color:#374151; }
+    .day-student-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 7px 12px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+        background: #f8f9fa;
+        font-size: 0.8rem;
+    }
+    .day-student-name { font-weight: 600; color: #1A1A1A; }
+    .day-student-ref  { font-size: 0.7rem; color: #888; }
+    .no-requests-msg  { text-align:center; color:#aaa; padding: 24px 0; font-size:0.85rem; }
+
 </style>
 @endpush
 
@@ -579,10 +858,241 @@
 <script>
     let calendar = null;
     let currentAppointmentId = null;
-
-    // Load time slots
     let currentDeleteSlotId = null;
     let currentEditSlot = null;
+
+    // ── Request-by-date data cache ────────────────────────────────────────────
+    let requestsByDate = {}; // keyed by 'YYYY-MM-DD'
+    let calendarStatusFilter = 'all';
+    let calendarSearchTerm = '';
+
+    function buildRequestUrl(start, end) {
+        const params = new URLSearchParams({
+            start,
+            end,
+        });
+        if (calendarStatusFilter && calendarStatusFilter !== 'all') {
+            params.set('status', calendarStatusFilter);
+        }
+        if (calendarSearchTerm.trim()) {
+            params.set('search', calendarSearchTerm.trim());
+        }
+        return '{{ route("registrar.calendar.requests-by-date") }}' + '?' + params.toString();
+    }
+
+    function fetchRequestsByDate(start, end) {
+        const url = buildRequestUrl(start, end);
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                requestsByDate = {};
+                data.forEach(d => { requestsByDate[d.date] = d; });
+                renderRequestDots();
+            })
+            .catch(err => {
+                console.error('Failed to load requests by date:', err);
+                renderCalendarError('Unable to load document request summaries for this month.');
+            });
+    }
+
+    function setCalendarStatusFilter(status) {
+        calendarStatusFilter = status;
+        document.querySelectorAll('.filter-chip').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.status === status);
+        });
+        if (calendar) {
+            fetchRequestsByDate(calendar.view.activeStart.toISOString().slice(0,10), calendar.view.activeEnd.toISOString().slice(0,10));
+        }
+    }
+
+    function setupCalendarFilters() {
+        document.querySelectorAll('.filter-chip').forEach(btn => {
+            btn.addEventListener('click', function() {
+                setCalendarStatusFilter(this.dataset.status);
+            });
+        });
+
+        const searchInput = document.getElementById('calendarSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', debounce(function(event) {
+                calendarSearchTerm = event.target.value;
+                if (calendar) {
+                    fetchRequestsByDate(calendar.view.activeStart.toISOString().slice(0,10), calendar.view.activeEnd.toISOString().slice(0,10));
+                }
+            }, 250));
+        }
+    }
+
+    function setupYearMonthSelectors() {
+        const yearSelect = document.getElementById('calendarYearSelect');
+        const monthSelect = document.getElementById('calendarMonthSelect');
+
+        if (!yearSelect || !monthSelect || !calendar) return;
+
+        // Populate years (current year - 2 to current year + 5)
+        const currentYear = new Date().getFullYear();
+        yearSelect.innerHTML = '';
+        for (let year = currentYear - 2; year <= currentYear + 5; year++) {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            if (year === currentYear) option.selected = true;
+            yearSelect.appendChild(option);
+        }
+
+        // Set current month
+        const currentMonth = new Date().getMonth();
+        monthSelect.value = currentMonth;
+
+        // Event listeners
+        yearSelect.addEventListener('change', function() {
+            navigateToSelectedDate();
+        });
+
+        monthSelect.addEventListener('change', function() {
+            navigateToSelectedDate();
+        });
+    }
+
+    function navigateToSelectedDate() {
+        const yearSelect = document.getElementById('calendarYearSelect');
+        const monthSelect = document.getElementById('calendarMonthSelect');
+
+        if (!yearSelect || !monthSelect || !calendar) return;
+
+        const year = parseInt(yearSelect.value);
+        const month = parseInt(monthSelect.value);
+
+        // Navigate to the selected year/month
+        const targetDate = new Date(year, month, 1);
+        calendar.gotoDate(targetDate);
+    }
+
+    function updateYearMonthSelectors() {
+        if (!calendar) return;
+
+        const currentDate = calendar.getDate();
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        const yearSelect = document.getElementById('calendarYearSelect');
+        const monthSelect = document.getElementById('calendarMonthSelect');
+
+        if (yearSelect) yearSelect.value = year;
+        if (monthSelect) monthSelect.value = month;
+    }
+
+    function debounce(fn, delay) {
+        let timer = null;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    function renderCalendarError(message) {
+        const calEl = document.getElementById('calendar');
+        if (!calEl) return;
+        calEl.innerHTML = '<div class="calendar-error">' + escapeHtml(message) + '</div>';
+    }
+
+    function renderRequestDots() {
+        // Remove old dot bars and badges
+        document.querySelectorAll('.req-dot-bar, .request-summary-badge').forEach(el => el.remove());
+
+        Object.entries(requestsByDate).forEach(([date, info]) => {
+            const dayCell = document.querySelector('.fc-daygrid-day[data-date="' + date + '"]');
+            if (!dayCell) return;
+
+            const eventsContainer = dayCell.querySelector('.fc-daygrid-day-events') || dayCell.querySelector('.fc-daygrid-day-frame');
+            if (!eventsContainer) return;
+
+            const dots = [];
+            if (info.pending.length) dots.push('<span class="req-dot" style="background:#DC3545;" title="Pending"></span>');
+            if (info.approved && info.approved.length) dots.push('<span class="req-dot" style="background:#F97316;" title="Approved"></span>');
+            if (info.processing.length) dots.push('<span class="req-dot" style="background:#F97316;" title="Processing"></span>');
+            if (info.ready.length)   dots.push('<span class="req-dot" style="background:#22c55e;" title="Ready for Pickup"></span>');
+            if (info.completed.length) dots.push('<span class="req-dot" style="background:#3b82f6;" title="Completed"></span>');
+            if (info.declined.length) dots.push('<span class="req-dot" style="background:#6B7280;" title="Declined"></span>');
+
+            let dotsHtml = '<div class="req-dot-bar">' + dots.join('') + '</div>';
+
+            const summary = [];
+            if (info.pending.length) summary.push('<span class="request-summary-badge request-summary-pending">' + info.pending.length + ' pending</span>');
+            if (info.approved && info.approved.length) summary.push('<span class="request-summary-badge request-summary-processing">' + info.approved.length + ' approved</span>');
+            if (info.processing.length) summary.push('<span class="request-summary-badge request-summary-processing">' + info.processing.length + ' processing</span>');
+            if (info.ready.length)   summary.push('<span class="request-summary-badge request-summary-ready">' + info.ready.length + ' ready</span>');
+            if (info.completed.length) summary.push('<span class="request-summary-badge request-summary-completed">' + info.completed.length + ' completed</span>');
+            if (info.declined.length) summary.push('<span class="request-summary-badge request-summary-declined">' + info.declined.length + ' declined</span>');
+
+            let summaryHtml = '';
+            if (summary.length) {
+                summaryHtml = '<div class="request-summary-wrapper">' + summary.join('') + '</div>';
+            }
+
+            if (dots.length || summary.length) {
+                eventsContainer.insertAdjacentHTML('beforeend', dotsHtml + summaryHtml);
+            }
+        });
+    }
+
+    function openDayModal(dateStr) {
+        const info = requestsByDate[dateStr];
+        const label = new Date(dateStr + 'T00:00:00').toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' });
+        document.getElementById('dayModalTitle').textContent = label;
+
+        let html = '';
+
+        const hasRequests = info && (
+            info.pending.length ||
+            (info.approved && info.approved.length) ||
+            info.processing.length ||
+            info.ready.length ||
+            info.completed.length ||
+            info.declined.length
+        );
+
+        if (!hasRequests) {
+            html = '<div class="no-requests-msg"><i class="bi bi-inbox" style="font-size:2rem;"></i><br>No document requests on this date.</div>';
+        } else {
+            const renderSection = (title, cls, items) => {
+                if (!items.length) return '';
+                let s = `<div class="day-status-section"><span class="day-status-title ${cls}">${title} (${items.length})</span>`;
+                items.forEach(st => {
+                    s += `<div class="day-student-row">
+                        <div>
+                            <div class="day-student-name">${escapeHtml(st.name)}</div>
+                            <div class="day-student-ref">${escapeHtml(st.sn)} &bull; ${escapeHtml(st.ref)}</div>
+                        </div>
+                    </div>`;
+                });
+                s += '</div>';
+                return s;
+            };
+            html += renderSection('Pending', 'pending', info.pending);
+            if (info.approved && info.approved.length) {
+                html += renderSection('Approved', 'processing', info.approved);
+            }
+            html += renderSection('Processing', 'processing', info.processing);
+            html += renderSection('Ready for Pickup', 'ready', info.ready);
+            html += renderSection('Completed', 'done', info.completed);
+            html += renderSection('Declined', 'declined', info.declined);
+        }
+
+        document.getElementById('dayModalBody').innerHTML = html;
+        document.getElementById('dayModal').style.display = 'flex';
+    }
+
+    function closeDayModal() {
+        document.getElementById('dayModal').style.display = 'none';
+    }
 
     // Load time slots with action buttons
     function loadTimeSlots() {
@@ -670,16 +1180,18 @@
     }
 
     // Save Time Slot (Create or Update)
-    document.getElementById('timeSlotForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const id = document.getElementById('timeSlotId').value;
-        const formData = {
-            label: document.getElementById('slotLabel').value,
-            start_time: document.getElementById('slotStartTime').value,
-            end_time: document.getElementById('slotEndTime').value,
-            max_capacity: document.getElementById('slotMaxCapacity').value,
-        };
+    const timeSlotForm = document.getElementById('timeSlotForm');
+    if (timeSlotForm) {
+        timeSlotForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('timeSlotId').value;
+            const formData = {
+                label: document.getElementById('slotLabel').value,
+                start_time: document.getElementById('slotStartTime').value,
+                end_time: document.getElementById('slotEndTime').value,
+                max_capacity: document.getElementById('slotMaxCapacity').value,
+            };
         
         const url = id ? `/registrar/time-slots/${id}` : '{{ route("registrar.timeslots.store") }}';
         const method = id ? 'PUT' : 'POST';
@@ -709,7 +1221,8 @@
             console.error('Error:', err);
             Swal.fire('Error', 'Failed to save time slot.', 'error');
         });
-    });
+        });
+    }
 
     // Toggle Time Slot Active Status
     function toggleTimeSlot(id) {
@@ -749,10 +1262,12 @@
     }
 
     // Delete Time Slot
-    document.getElementById('confirmDeleteSlotBtn').addEventListener('click', function() {
-        if (!currentDeleteSlotId) return;
-        
-        fetch(`/registrar/time-slots/${currentDeleteSlotId}`, {
+    const confirmDeleteSlotBtn = document.getElementById('confirmDeleteSlotBtn');
+    if (confirmDeleteSlotBtn) {
+        confirmDeleteSlotBtn.addEventListener('click', function() {
+            if (!currentDeleteSlotId) return;
+            
+            fetch(`/registrar/time-slots/${currentDeleteSlotId}`, {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -777,7 +1292,8 @@
             Swal.fire('Error', 'Failed to delete time slot.', 'error');
             closeDeleteSlotModal();
         });
-    });
+        });
+    }
 
     function closeAppointmentModal() {
         document.getElementById('appointmentModal').style.display = 'none';
@@ -838,5 +1354,100 @@
     }
     updateTime();
     setInterval(updateTime, 1000);
+
+    // ── FullCalendar init ─────────────────────────────────────────────────────
+    function initCalendar() {
+        try {
+        const calEl = document.getElementById('calendar');
+        if (!calEl) { console.error('Calendar element #calendar not found'); return; }
+        if (typeof FullCalendar === 'undefined') {
+            console.error('FullCalendar not loaded');
+            renderCalendarError('Calendar script failed to load. Please refresh the page.');
+            return;
+        }
+        calendar = new FullCalendar.Calendar(calEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: '',
+                center: 'title',
+                right: ''
+            },
+            editable: true,
+            eventSources: [
+                {
+                    url: '{{ route("registrar.calendar.appointments") }}',
+                    method: 'GET',
+                    failure: function() { console.error('Failed to load appointments'); }
+                }
+            ],
+            datesSet: function(info) {
+                fetchRequestsByDate(info.startStr.slice(0,10), info.endStr.slice(0,10));
+                updateYearMonthSelectors();
+            },
+            eventDidMount: function(info) {
+                // Re-render dots after events render
+                setTimeout(renderRequestDots, 50);
+            },
+            dateClick: function(info) {
+                openDayModal(info.dateStr);
+            },
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                const props = info.event.extendedProps;
+                currentAppointmentId = info.event.id;
+
+                document.getElementById('modalStudentName').textContent  = info.event.title;
+                document.getElementById('modalStudentNumber').textContent = props.student_number;
+                document.getElementById('modalReferenceNo').textContent  = props.reference_number;
+                document.getElementById('modalAmount').textContent       = '₱' + parseFloat(props.amount).toFixed(2);
+                document.getElementById('modalTimeSlot').textContent     = props.time_slot_label;
+
+                const badge = document.getElementById('modalStatus');
+                badge.textContent = props.status.charAt(0).toUpperCase() + props.status.slice(1).replace(/_/g,' ');
+                badge.className = 'status-badge status-' + props.status;
+
+                const actions = document.getElementById('modalActions');
+                const completeBtn = actions.querySelector('.btn-complete');
+                const missedBtn   = actions.querySelector('.btn-missed');
+                if (props.status === 'scheduled') {
+                    completeBtn.style.display = '';
+                    missedBtn.style.display   = '';
+                } else {
+                    completeBtn.style.display = 'none';
+                    missedBtn.style.display   = 'none';
+                }
+
+                document.getElementById('appointmentModal').style.display = 'flex';
+            },
+            eventDrop: function(info) {
+                fetch('{{ route("registrar.calendar.reschedule", ["id" => "__ID__"]) }}'.replace('__ID__', info.event.id), {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ new_date: info.event.startStr.slice(0,10) })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (!d.success) { info.revert(); Swal.fire('Error', d.message, 'error'); }
+                    else { fetchRequestsByDate(calendar.view.activeStart.toISOString().slice(0,10), calendar.view.activeEnd.toISOString().slice(0,10)); }
+                })
+                .catch(() => { info.revert(); });
+            }
+        });
+        calendar.render();
+        setupCalendarFilters();
+        setupYearMonthSelectors();
+        loadTimeSlots();
+        } catch(e) {
+            console.error('Calendar init error:', e);
+            const calEl = document.getElementById('calendar');
+            if (calEl) calEl.innerHTML = '<div class="calendar-error">Unable to load calendar. See browser console for details.</div>';
+        }
+    }
+    // Run immediately — @stack('scripts') is at bottom of <body> so DOM is ready
+    initCalendar();
 </script>
 @endpush

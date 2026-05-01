@@ -30,9 +30,10 @@ class RoleMiddleware
         // auth()->user() returns the currently logged-in user.
         // We check their role column against the required role for this route.
         if (auth()->user()->role !== $role) {
-            // abort(403) stops everything and returns an HTTP 403 Forbidden response.
-            // This prevents students from visiting /registrar/dashboard, etc.
-            abort(403, 'Access denied. You do not have permission to view this page.');
+            // Instead of a hard 403, redirect the user to their own dashboard
+            // with a friendly message so they understand what happened.
+            return redirect()->route('dashboard')
+                ->with('error', 'Access denied. You do not have permission to view that page.');
         }
 
         // Role matches — allow the request to continue to the controller.

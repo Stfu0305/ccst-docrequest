@@ -640,6 +640,7 @@
 
         {{-- RIGHT PANEL --}}
         <aside class="right-panel">
+            @yield('right-panel')
             <img src="{{ asset('images/4-easy-steps-to-process.png') }}"
                 alt="4 Easy Steps to Process Documents"
                 class="right-panel-steps-img">
@@ -665,9 +666,9 @@
     // ═══════════════════════════════════════════════════════════════════════
 
     (function() {
-        const FETCH_URL = '/registrar/notifications';
-        const READ_URL_TEMPLATE = '/registrar/notifications/__ID__/read';
-        const READ_ALL_URL = '/registrar/notifications/mark-all-read';
+        const FETCH_URL = '{{ route("registrar.notifications.index") }}';
+        const READ_URL_TEMPLATE = '{{ route("registrar.notifications.markOneRead", ["id" => "__ID__"]) }}';
+        const READ_ALL_URL = '{{ route("registrar.notifications.markAllRead") }}';
         const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
         
         let lastNotificationCount = 0;
@@ -794,7 +795,7 @@
         });
         
         // Initial badge count
-        fetch(FETCH_URL, {
+        fetch('{{ route("registrar.notifications.index") }}', {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': CSRF_TOKEN },
             credentials: 'same-origin'
         })

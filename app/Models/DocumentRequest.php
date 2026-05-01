@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PaymentProof;
 
 class DocumentRequest extends Model
 {
@@ -63,6 +64,17 @@ class DocumentRequest extends Model
     {
         return $this->belongsTo(Appointment::class);
     }
+
+    public function paymentProof()
+    {
+        return $this->hasOne(PaymentProof::class)->latestOfMany();
+    }
+
+    public function paymentProofs()
+    {
+        return $this->hasMany(PaymentProof::class);
+    }
+
 
     public function processedBy()
     {
