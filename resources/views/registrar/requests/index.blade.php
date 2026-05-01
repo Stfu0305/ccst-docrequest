@@ -60,13 +60,12 @@
                 <thead>
                     <tr>
                         <th style="width: 10%">Reference No.</th>
-                        <th style="width: 15%">Student Name</th>
-                        <th style="width: 8%">Request Date</th>
-                        <th style="width: 8%">Total Amount</th>
-                        <th style="width: 10%">Payment Method</th>
-                        <th style="width: 10%">Payment Status</th>
+                        <th style="width: 14%">Student Name</th>
+                        <th style="width: 9%">Request Date</th>
+                        <th style="width: 12%">Document Type(s)</th>
+                        <th style="width: 9%">Total Amount</th>
                         <th style="width: 12%">Request Status</th>
-                        <th style="width: 27%">Action</th>
+                        <th style="width: 20%">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,114 +74,57 @@
                         <td style="width: 10%">
                             <strong>{{ $request->reference_number }}</strong>
                         </td>
-                        <td style="width: 15%">{{ $request->full_name }}</td>
-                        <td style="width: 8%">{{ $request->created_at->format('M d, Y') }}</td>
-                        <td style="width: 8%">₱{{ number_format($request->total_fee, 2) }}</td>
-                        <td style="width: 10%">
-                            @if($request->payment_method === 'gcash')
-                                <span class="method-badge method-gcash"><i class="bi bi-phone"></i> GCash</span>
-                            @elseif($request->payment_method === 'bank_transfer')
-                                <span class="method-badge method-bank"><i class="bi bi-bank"></i> Bank Transfer</span>
-                            @elseif($request->payment_method === 'cash')
-                                <span class="method-badge method-cash"><i class="bi bi-cash"></i> Cash</span>
-                            @else
-                                <span class="method-badge method-na">—</span>
-                            @endif
+                        <td style="width: 14%">{{ $request->full_name }}</td>
+                        <td style="width: 9%">{{ $request->created_at->format('M d, Y') }}</td>
+                        <td style="width: 12%">
+                            <div class="document-types">
+                                @foreach($request->items as $item)
+                                    <span class="doc-type-badge" title="{{ $item->documentType->name }}">{{ $item->documentType->code }}</span>
+                                @endforeach
+                            </div>
                         </td>
-                        <td style="width: 10%">
-                            @php
-                                $payStatus = match(true) {
-                                    $request->status === 'cancelled' => ['label' => 'Cancelled', 'class' => 'status-cancelled'],
-                                    is_null($request->payment_method) => ['label' => 'Not Set', 'class' => 'status-waiting'],
-                                    $request->payment_method === 'cash' && $request->status === 'payment_method_set' => ['label' => 'Pending Cash', 'class' => 'status-pending'],
-                                    $request->status === 'payment_method_set' => ['label' => 'Not Uploaded', 'class' => 'status-waiting'],
-                                    $request->status === 'payment_uploaded' => ['label' => 'Pending Verification', 'class' => 'status-pending'],
-                                    $request->status === 'payment_rejected' => ['label' => 'Rejected', 'class' => 'status-rejected'],
-                                    $request->status === 'payment_verified' => ['label' => 'Verified', 'class' => 'status-verified'],
-                                    default => ['label' => $request->status, 'class' => 'status-waiting'],
-                                };
-                            @endphp
-                            <span class="status-badge {{ $payStatus['class'] }}">{{ $payStatus['label'] }}</span>
-                        </td>
+                        <td style="width: 9%">₱{{ number_format($request->total_fee, 2) }}</td>
                         <td style="width: 12%">
                             @php
                                 $reqStatus = match($request->status) {
                                     'pending' => ['label' => 'Pending', 'class' => 'req-pending'],
-                                    'payment_method_set' => ['label' => 'Pending', 'class' => 'req-pending'],
-                                    'payment_uploaded' => ['label' => 'Pending', 'class' => 'req-pending'],
-                                    'payment_rejected' => ['label' => 'Pending', 'class' => 'req-pending'],
-                                    'payment_verified' => ['label' => 'Payment Verified', 'class' => 'req-verified'],
-                                    'processing' => ['label' => 'Processing', 'class' => 'req-processing'],
                                     'ready_for_pickup' => ['label' => 'Ready for Pickup', 'class' => 'req-ready'],
-                                    'received' => ['label' => 'Received', 'class' => 'req-received'],
+                                    'completed' => ['label' => 'Completed', 'class' => 'req-completed'],
                                     'cancelled' => ['label' => 'Cancelled', 'class' => 'req-cancelled'],
                                     default => ['label' => $request->status, 'class' => 'req-pending'],
                                 };
                             @endphp
                             <span class="req-badge {{ $reqStatus['class'] }}">{{ $reqStatus['label'] }}</span>
-                            @if($request->status === 'ready_for_pickup' && $request->claiming_number)
-                                <div class="claiming-hint" title="Claiming Number">{{ $request->claiming_number }}</div>
-                            @endif
                         </td>
-                        <td style="width: 27%">
-                            <div class="action-buttons" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-                                {{-- PRINT BUTTON (shows for all requests) --}}
-                                <button class="action-btn-print" onclick="printRequest({{ $request->id }})">
-                                    <i class="bi bi-printer"></i> Print
-                                </button>
-                                
-                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view" style="width: 100%; justify-content: center;">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-                                
-                                {{-- Generate Document Button (for printable documents when ready) --}}
-                                @if($request->status === 'pending' || $request->status === 'ready_for_pickup')
-                                    @foreach($request->items as $item)
-                                        @if($item->documentType->is_printable)
-                                            <a href="{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}" 
-                                               class="action-btn-generate" target="_blank" style="width: 100%; justify-content: center;">
-                                                <i class="bi bi-file-pdf"></i> Generate {{ $item->documentType->code }}
-                                            </a>
-                                        @endif
-                                    @endforeach
-                                @endif
-                                
-                                {{-- Status Dropdown --}}
-                                @if(!in_array($request->status, ['completed', 'cancelled']))
-                                <div class="status-dropdown">
-                                    <button class="action-btn-status" onclick="toggleStatusDropdown({{ $request->id }})">
-                                        <i class="bi bi-arrow-repeat"></i> Status
+                        <td style="width: 20%">
+                            <div class="action-buttons">
+                                {{-- Completed -> Details --}}
+                                @if($request->status === 'completed')
+                                    <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-details" title="View Details">
+                                        <i class="bi bi-info-circle"></i> Details
+                                    </a>
+                                {{-- Ready for Pickup -> Print Documents --}}
+                                @elseif($request->status === 'ready_for_pickup')
+                                    <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-print">
+                                        <i class="bi bi-printer"></i> Print Documents
+                                    </a>
+                                {{-- Pending & Non-Printable -> Mark as Ready --}}
+                                @elseif($request->status === 'pending' && !$request->is_printable)
+                                    <button class="action-btn-ready" onclick="markAsReady({{ $request->id }}, '{{ $request->reference_number }}')">
+                                        <i class="bi bi-check-circle"></i> Mark as Ready
                                     </button>
-                                    <div class="status-dropdown-menu" id="status-dropdown-{{ $request->id }}">
-                                        {{-- For Not Ready to Print documents --}}
-                                        @if($request->status === 'pending')
-                                            <button onclick="updateStatus({{ $request->id }}, 'ready_for_pickup')" class="status-option">
-                                                <i class="bi bi-box-seam"></i> Ready for Pickup
-                                            </button>
-                                        @endif
-                                        
-                                        {{-- Mark as Completed (after printing) --}}
-                                        @if($request->status === 'ready_for_pickup')
-                                            <button onclick="markAsCompleted({{ $request->id }})" class="status-option">
-                                                <i class="bi bi-check2-all"></i> Mark as Completed
-                                            </button>
-                                        @endif
-                                        
-                                        {{-- Cancel option --}}
-                                        @if(!in_array($request->status, ['completed', 'cancelled']))
-                                            <button onclick="updateStatus({{ $request->id }}, 'cancelled')" class="status-option status-cancel">
-                                                <i class="bi bi-x-circle"></i> Cancel Request
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
+                                {{-- Default fallback (e.g. Received/Cancelled/Other Pending) --}}
+                                @else
+                                    <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-details">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
                                 @endif
                             </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-muted">No document requests found.</td>
+                        <td colspan="7" class="text-center py-4 text-muted">No document requests found.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -390,7 +332,7 @@
 
     .requests-table th {
         background: #F0F7F0;
-        padding: 12px 16px;
+        padding: 8px 6px;
         font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
@@ -400,7 +342,7 @@
     }
 
     .requests-table td {
-        padding: 12px 16px;
+        padding: 8px 6px;
         border-bottom: 1px solid #f0f0f0;
         font-size: 0.8rem;
         vertical-align: middle;
@@ -411,11 +353,7 @@
         background: #f8fafb;
     }
 
-    /* Make first column text left-aligned */
-    .requests-table td:first-child,
-    .requests-table th:first-child {
-        text-align: left;
-    }
+
 
     /* Method Badges */
     .method-badge {
@@ -496,7 +434,8 @@
         font-size: 0.7rem;
         font-weight: 600;
         text-decoration: none;
-        width: 100px;
+        width: 90%;
+        min-width: 100px;
     }
 
     .action-btn-view:hover {
@@ -516,7 +455,8 @@
         font-size: 0.7rem;
         font-weight: 600;
         text-decoration: none;
-        width: 100px;
+        width: 90%;
+        min-width: 100px;
     }
 
     .action-btn-generate:hover {
@@ -537,7 +477,8 @@
         font-size: 0.7rem;
         font-weight: 600;
         cursor: pointer;
-        width: 100px;
+        width: 90%;
+        min-width: 100px;
         transition: all 0.2s;
     }
 
@@ -760,27 +701,122 @@
         text-transform: uppercase;
     }
 
-    .action-btn-print {
+    .action-btn-details {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 4px;
-        background: #1B6B3A;
+        background: #6c757d;
         color: white;
         padding: 4px 12px;
         border-radius: 6px;
         font-size: 0.7rem;
         font-weight: 600;
         text-decoration: none;
-        width: 100%;
-        cursor: pointer;
+        width: 90%;
+        min-width: 100px;
+    }
+    .action-btn-details:hover { background: #5a6268; color: white; }
+
+    .action-btn-ready {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: #17a2b8;
+        color: white;
         border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        width: 90%;
+        min-width: 100px;
+        cursor: pointer;
+    }
+    .action-btn-ready:hover { background: #138496; }
+
+    .action-btn-print {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: #1A9FE0;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+        width: 90%;
+        min-width: 100px;
+    }
+    .action-btn-print:hover { background: #0D7FBF; color: white; }
+
+    .action-btn-view {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        width: 90%;
+        min-width: 100px;
+        cursor: pointer;
+    }
+    .action-btn-view:hover { background: #5a6268; color: white; }
+
+    .action-btn-generate {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: #ffc107;
+        color: #212529;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-decoration: none;
+        width: 90%;
+        min-width: 100px;
+    }
+    .action-btn-generate:hover { background: #e0a800; color: #212529; }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 100%;
+        align-items: center;
     }
 
-    .action-btn-print:hover {
-        background: #0C5A2E;
-        color: white;
+    .document-types {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
     }
+
+    .doc-type-badge {
+        display: inline-block;
+        background: #F0F7F0;
+        color: #1B6B3A;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+
+    .req-pending { background: #FFF3CD; color: #856404; }
+    .req-ready { background: #F5A623; color: white; font-weight: 800; }
+    .req-completed { background: #1B6B3A; color: white; font-weight: 800; }
+    .req-cancelled { background: #DC3545; color: white; }
 </style>
 @endpush
 
@@ -880,64 +916,6 @@
         });
     }
 
-    // Mark as received with claiming number verification
-    function markReceived(requestId, claimingNumber) {
-        Swal.fire({
-            title: 'Verify Claiming Number',
-            html: `
-                <div style="text-align: left;">
-                    <p>Student must provide their claiming number to receive documents.</p>
-                    <label style="display: block; margin-top: 10px; font-weight: 600;">Enter Claiming Number:</label>
-                    <input type="text" id="enteredClaimingNumber" class="swal2-input" placeholder="e.g., ${claimingNumber}" style="width: 100%;">
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonColor: '#1B6B3A',
-            cancelButtonColor: '#DC3545',
-            confirmButtonText: 'Verify & Mark Received',
-            cancelButtonText: 'Cancel',
-            preConfirm: () => {
-                const entered = document.getElementById('enteredClaimingNumber').value.toUpperCase().trim();
-                if (entered !== claimingNumber) {
-                    Swal.showValidationMessage(`Claiming number does not match! Expected: ${claimingNumber}`);
-                    return false;
-                }
-                return true;
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.getElementById('receivedForm');
-                form.action = `/registrar/requests/${requestId}/received`;
-                form.submit();
-            }
-        });
-    }
-
-    // Generate Document and Mark Completed
-    function generateAndComplete(url, id, docName) {
-        Swal.fire({
-            title: `Print ${docName}?`,
-            text: 'This will generate the document. Once printed and given to the student, this request will be automatically marked as COMPLETED.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#1B6B3A',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, print and complete',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Open PDF in new tab
-                window.open(url, '_blank');
-                
-                // Mark as completed
-                const form = document.getElementById('statusForm');
-                form.action = `/registrar/requests/${id}/status`;
-                document.getElementById('statusValue').value = 'completed';
-                form.submit();
-            }
-        });
-    }
-
     // Print request details
     function printRequest(requestId) {
         // Open the request show page in a new window and trigger print
@@ -948,23 +926,48 @@
     }
 
     // Mark as completed (auto-marks payment as paid)
-    function markAsCompleted(id) {
+    function markAsReady(requestId, refNo) {
         Swal.fire({
-            title: 'Mark as Completed?',
-            text: 'This will mark the request as completed and the payment as PAID. This action cannot be undone.',
-            icon: 'warning',
+            title: 'Mark as Ready?',
+            text: `Are you sure you want to mark request ${refNo} as ready for pickup? This will notify the student to claim their documents.`,
+            icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#1B6B3A',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, Mark as Completed',
+            confirmButtonText: 'Yes, Mark as Ready',
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                const form = document.getElementById('statusForm');
-                form.action = `/registrar/requests/${id}/completed`;
-                form.submit();
+                // Use fetch for AJAX request
+                const url = `{{ route('registrar.requests.mark-ready', ':id') }}`.replace(':id', requestId);
+                fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Success', data.message, 'success').then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'Something went wrong', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                });
             }
         });
+    }
+
+    function viewDocumentSummary(requestId) {
+        window.location.href = `/registrar/requests/${requestId}`;
     }
 
     // Live clock

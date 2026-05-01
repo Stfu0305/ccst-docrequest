@@ -30,7 +30,7 @@
             --border:       #D0DDD0;
             --white:        #FFFFFF;
             --sidebar-w:    240px;
-            --right-w:      300px;
+            --right-w:      350px;
             --header-h:     50px;
             --footer-h:     35px;
         }

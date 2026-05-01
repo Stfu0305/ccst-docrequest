@@ -26,10 +26,9 @@
                         <tr>
                             <th style="width: 20%">Student Name</th>
                             <th style="width: 15%">Reference No.</th>
-                            <th style="width: 15%">Appointment Date</th>
-                            <th style="width: 15%">Time Slot</th>
-                            <th style="width: 15%">Claiming Number</th>
-                            <th style="width: 10%">Status</th>
+                            <th style="width: 20%">Appointment Date</th>
+                            <th style="width: 20%">Time Slot</th>
+                            <th style="width: 15%">Status</th>
                             <th style="width: 10%">Action</th>
                         </tr>
                     </thead>
@@ -42,15 +41,8 @@
                                     {{ $appointment->documentRequest->reference_number ?? 'N/A' }}
                                 </a>
                             </td>
-                            <td style="width: 15%">{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}</td>
-                            <td style="width: 15%">{{ $appointment->timeSlot->label ?? '—' }}</td>
-                            <td style="width: 15%">
-                                @if($appointment->documentRequest && $appointment->documentRequest->claiming_number)
-                                    <span class="claiming-badge">{{ $appointment->documentRequest->claiming_number }}</span>
-                                @else
-                                    —
-                                @endif
-                            </td>
+                            <td style="width: 20%">{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}</td>
+                            <td style="width: 20%">{{ $appointment->timeSlot->label ?? '—' }}</td>
                             <td style="width: 10%">
                                 @php
                                     $statusClass = match($appointment->status) {
@@ -99,10 +91,9 @@
                 <table class="appointments-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%">Student Name</th>
-                            <th style="width: 20%">Reference No.</th>
-                            <th style="width: 20%">Time Slot</th>
-                            <th style="width: 20%">Claiming Number</th>
+                            <th style="width: 30%">Student Name</th>
+                            <th style="width: 25%">Reference No.</th>
+                            <th style="width: 25%">Time Slot</th>
                             <th style="width: 10%">Status</th>
                             <th style="width: 10%">Action</th>
                         </tr>
@@ -110,20 +101,13 @@
                     <tbody>
                         @forelse($todayAppointments as $appointment)
                         <tr>
-                            <td style="width: 25%">{{ $appointment->student->name ?? 'N/A' }}</td>
-                            <td style="width: 20%">
+                            <td style="width: 30%">{{ $appointment->student->name ?? 'N/A' }}</td>
+                            <td style="width: 25%">
                                 <a href="{{ route('registrar.requests.show', $appointment->document_request_id) }}" class="ref-link">
                                     {{ $appointment->documentRequest->reference_number ?? 'N/A' }}
                                 </a>
                             </td>
-                            <td style="width: 20%">{{ $appointment->timeSlot->label ?? '—' }}</td>
-                            <td style="width: 20%">
-                                @if($appointment->documentRequest && $appointment->documentRequest->claiming_number)
-                                    <span class="claiming-badge">{{ $appointment->documentRequest->claiming_number }}</span>
-                                @else
-                                    —
-                                @endif
-                            </td>
+                            <td style="width: 25%">{{ $appointment->timeSlot->label ?? '—' }}</td>
                             <td style="width: 10%">
                                 @php
                                     $statusClass = match($appointment->status) {
@@ -173,10 +157,9 @@
                         <tr>
                             <th style="width: 20%">Student Name</th>
                             <th style="width: 15%">Reference No.</th>
-                            <th style="width: 15%">Appointment Date</th>
-                            <th style="width: 15%">Time Slot</th>
-                            <th style="width: 15%">Claiming Number</th>
-                            <th style="width: 10%">Status</th>
+                            <th style="width: 20%">Appointment Date</th>
+                            <th style="width: 20%">Time Slot</th>
+                            <th style="width: 15%">Status</th>
                             <th style="width: 10%">Action</th>
                         </tr>
                     </thead>
@@ -189,15 +172,8 @@
                                     {{ $appointment->documentRequest->reference_number ?? 'N/A' }}
                                 </a>
                             </td>
-                            <td style="width: 15%">{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}</td>
-                            <td style="width: 15%">{{ $appointment->timeSlot->label ?? '—' }}</td>
-                            <td style="width: 15%">
-                                @if($appointment->documentRequest && $appointment->documentRequest->claiming_number)
-                                    <span class="claiming-badge">{{ $appointment->documentRequest->claiming_number }}</span>
-                                @else
-                                    —
-                                @endif
-                            </td>
+                            <td style="width: 20%">{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y') }}</td>
+                            <td style="width: 20%">{{ $appointment->timeSlot->label ?? '—' }}</td>
                             <td style="width: 10%">
                                 @php
                                     $statusClass = match($appointment->status) {
@@ -618,7 +594,7 @@
         background: #1B6B3A;
         color: white;
         border: none;
-        padding: 4px 12px;
+        padding: 4px 8px;
         border-radius: 6px;
         font-size: 0.7rem;
         font-weight: 600;
@@ -638,7 +614,7 @@
         background: #DC3545;
         color: white;
         border: none;
-        padding: 4px 12px;
+        padding: 4px 8px;
         border-radius: 6px;
         font-size: 0.7rem;
         font-weight: 600;
@@ -658,13 +634,13 @@
         background: #F5C518;
         color: #1A1A1A;
         border: none;
-        padding: 4px 12px;
+        padding: 4px 8px;
         border-radius: 6px;
         font-size: 0.7rem;
         font-weight: 600;
         cursor: pointer;
         transition: background 0.2s;
-        min-width: 60px;
+        min-width: 38px;
     }
 
     .action-btn-edit:hover {
@@ -679,13 +655,13 @@
         background: #1A9FE0;
         color: white;
         border: none;
-        padding: 4px 12px;
+        padding: 4px 8px;
         border-radius: 6px;
         font-size: 0.7rem;
         font-weight: 600;
         cursor: pointer;
         transition: background 0.2s;
-        min-width: 60px;
+        min-width: 38px;
     }
 
     .action-btn-toggle:hover {

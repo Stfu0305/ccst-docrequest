@@ -46,6 +46,22 @@ class DocumentRequestController extends Controller
         ]);
 
         $user = Auth::user();
+        
+        // Collect document types and printability
+        $documentTypeCodes = [];
+        $allPrintable = true;
+
+        foreach ($validated['documents'] as $doc) {
+            $docType = DocumentType::findOrFail($doc['document_type_id']);
+            $documentTypeCodes[] = $docType->code;
+            
+            if (!$docType->is_printable) {
+                $allPrintable = false;
+            }
+        }
+
+        // Determine initial status
+        $initialStatus = $allPrintable ? 'ready_for_pickup' : 'pending';
 
         // Create the DocumentRequest
         $docRequest = DocumentRequest::create([
@@ -58,7 +74,9 @@ class DocumentRequestController extends Controller
             'year_level'       => $validated['year_level'],
             'section'          => $validated['section'],
             'total_fee'        => 0,
-            'status'           => 'pending',
+            'document_types'   => implode(', ', $documentTypeCodes),
+            'status'           => $initialStatus,
+            'is_printable'     => $allPrintable,
         ]);
 
         // Generate reference number
@@ -67,7 +85,6 @@ class DocumentRequestController extends Controller
         ]);
 
         $totalFee = 0;
-        $allPrintable = true;
 
         foreach ($validated['documents'] as $doc) {
             $docType = DocumentType::findOrFail($doc['document_type_id']);
@@ -82,10 +99,6 @@ class DocumentRequestController extends Controller
             ]);
 
             $totalFee += $docType->fee * $doc['copies'];
-            
-            if (!$docType->is_printable) {
-                $allPrintable = false;
-            }
         }
 
         $docRequest->update(['total_fee' => $totalFee]);
@@ -95,7 +108,7 @@ class DocumentRequestController extends Controller
             'document_request_id' => $docRequest->id,
             'changed_by'          => $user->id,
             'old_status'          => null,
-            'new_status'          => 'pending',
+            'new_status'          => $initialStatus,
             'notes'               => 'Request submitted by student.',
         ]);
 
@@ -122,13 +135,11 @@ class DocumentRequestController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function show($id)
     {
-        $docRequest = DocumentRequest::with(['items.documentType', 'paymentProof'])
+        $docRequest = DocumentRequest::with(['items.documentType'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        $paymentSettings = \App\Models\PaymentSetting::where('is_active', true)->get()->keyBy('method');
-
-        return view('student.requests.show', compact('docRequest', 'paymentSettings'));
+        return view('student.requests.show', compact('docRequest'));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

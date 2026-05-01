@@ -70,7 +70,7 @@ class AppointmentController extends Controller
         $message = 'Your pickup appointment has been scheduled for ' . 
                    date('F j, Y', strtotime($appointment->appointment_date)) . 
                    ' at ' . $timeSlot->label . 
-                   '. Please bring your claiming number: ' . $docRequest->claiming_number;
+                   '.';
         $url = route('student.requests.history');
         $this->sendNotificationToCurrentUser($message, $url);
 
