@@ -46,14 +46,9 @@ class RequestManagementController extends Controller
 
         // Define allowed status transitions
         $allowedTransitions = [
-            'pending' => ['processing', 'cancelled'],
-            'payment_method_set' => ['processing', 'cancelled'],
-            'payment_uploaded' => ['processing', 'cancelled'],
-            'payment_rejected' => ['processing', 'cancelled'],
-            'payment_verified' => ['processing', 'cancelled'],
-            'processing' => ['ready_for_pickup', 'cancelled'],
-            'ready_for_pickup' => ['received', 'cancelled'],
-            'received' => [],
+            'pending' => ['ready_for_pickup', 'completed', 'cancelled'],
+            'ready_for_pickup' => ['completed', 'cancelled'],
+            'completed' => [],
             'cancelled' => [],
         ];
 
@@ -67,15 +62,9 @@ class RequestManagementController extends Controller
             return redirect()->route('registrar.requests.index');
         }
 
-        // Generate claiming number when status becomes ready_for_pickup
-        $claimingNumber = null;
-        if ($newStatus === 'ready_for_pickup') {
-            if (empty($docRequest->claiming_number)) {
-                $claimingNumber = 'CLM-' . strtoupper(substr(uniqid(), 0, 6));
-                $docRequest->claiming_number = $claimingNumber;
-            } else {
-                $claimingNumber = $docRequest->claiming_number;
-            }
+        // Auto-mark payment if completed
+        if ($newStatus === 'completed') {
+            // payment is now handled manually/by completing the request
         }
 
         $docRequest->status = $newStatus;
@@ -93,7 +82,7 @@ class RequestManagementController extends Controller
         // Send notification to STUDENT
         $student = $docRequest->user;
         if ($student) {
-            $message = $this->getStudentStatusMessage($newStatus, $docRequest->reference_number, $claimingNumber);
+            $message = $this->getStudentStatusMessage($newStatus, $docRequest->reference_number);
             $url = route('student.requests.history');
             $this->sendNotification($student, $message, $url);
         }
@@ -122,8 +111,6 @@ class RequestManagementController extends Controller
         }
 
         $docRequest->status = 'received';
-        $docRequest->payment_status = 'paid';
-        $docRequest->paid_at = $docRequest->paid_at ?? now();
         $docRequest->save();
 
         // Update appointment if exists
@@ -160,80 +147,97 @@ class RequestManagementController extends Controller
         return redirect()->route('registrar.requests.index');
     }
 
-    public function markAsPaid(Request $request, $id)
+    /**
+     * Mark request as completed (after printing)
+     */
+    public function markAsCompleted($id)
     {
         $docRequest = DocumentRequest::findOrFail($id);
-
-        if ($docRequest->payment_status === 'paid') {
-            $message = "ℹ️ Request {$docRequest->reference_number} is already marked as paid.";
-            $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $docRequest->id));
-            session()->flash('check_notifications', true);
-            return redirect()->back();
-        }
-
-        $receiptNumber = $request->input('receipt_number');
-        $cashierName = $request->input('cashier_name');
-
+        
+        $oldStatus = $docRequest->status;
         $docRequest->update([
-            'payment_status' => 'paid',
-            'paid_at'        => now(),
-            'receipt_number' => $receiptNumber,
-            'cashier_name'   => $cashierName,
+            'status' => 'completed',
+            'completed_at' => now(),
         ]);
-
-        // Log it
+        
+        // Log status change
         StatusLog::create([
             'document_request_id' => $docRequest->id,
-            'changed_by'          => Auth::id(),
-            'old_status'          => $docRequest->status,
-            'new_status'          => $docRequest->status,
-            'notes'               => "Payment marked as PAID by registrar. Receipt: {$receiptNumber}",
+            'changed_by' => Auth::id(),
+            'old_status' => $oldStatus,
+            'new_status' => 'completed',
+            'notes' => 'Request marked as completed.',
         ]);
+        
+        // Send notification to student
+        $student = $docRequest->user;
+        if ($student) {
+            $message = "✅ Your documents for request {$docRequest->reference_number} have been completed. Thank you for using CCST DocRequest!";
+            $url = route('student.requests.history');
+            $this->sendNotification($student, $message, $url);
+        }
+        
+        session()->flash('check_notifications', true);
+        
+        return redirect()->route('registrar.requests.index')
+            ->with('success', 'Request marked as completed.');
+    }
 
+    /**
+     * Mark request as ready for pickup
+     */
+    public function markAsReady($id)
+    {
+        $docRequest = DocumentRequest::findOrFail($id);
+        
+        if ($docRequest->status !== 'pending') {
+             if (request()->ajax()) {
+                 return response()->json(['success' => false, 'message' => 'Only pending requests can be marked as ready.'], 400);
+             }
+             return back()->with('error', 'Only pending requests can be marked as ready.');
+        }
+        
+        $oldStatus = $docRequest->status;
+        $docRequest->status = 'ready_for_pickup';
+        
+        // Log status change
+        \App\Models\StatusLog::create([
+            'document_request_id' => $docRequest->id,
+            'changed_by' => Auth::id(),
+            'old_status' => $oldStatus,
+            'new_status' => 'ready_for_pickup',
+            'notes' => "Marked as ready for pickup.",
+        ]);
+        
         // Notify student
         $student = $docRequest->user;
         if ($student) {
-            $message = "💰 Payment for your request {$docRequest->reference_number} has been confirmed. Receipt No: {$receiptNumber}.";
+            $message = "📦 Your request {$docRequest->reference_number} is ready for pickup! Please proceed to the registrar's office to claim your documents.";
             $url = route('student.requests.history');
             $this->sendNotification($student, $message, $url);
         }
 
-        // Notify registrar
-        $this->sendNotificationToCurrentUser(
-            "✅ Request {$docRequest->reference_number} marked as PAID. Receipt: {$receiptNumber}",
-            route('registrar.requests.show', $docRequest->id)
-        );
+        if (request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Request marked as ready for pickup.'
+            ]);
+        }
+
         session()->flash('check_notifications', true);
-
-        return redirect()->back()->with('success', 'Payment marked as paid successfully.');
+        
+        return back()->with('success', 'Request marked as ready for pickup.');
     }
 
-    public function serveProof($id)
-    {
-        $request = DocumentRequest::findOrFail($id);
-        
-        if (!$request->paymentProof || !$request->paymentProof->file_path) {
-            abort(404);
-        }
 
-        $path = storage_path('app/private/' . $request->paymentProof->file_path);
-        
-        if (!file_exists($path)) {
-            abort(404);
-        }
 
-        $mime = mime_content_type($path);
-        
-        return response()->file($path, ['Content-Type' => $mime]);
-    }
-
-    private function getStudentStatusMessage($status, $referenceNumber, $claimingNumber = null)
+    private function getStudentStatusMessage($status, $referenceNumber)
     {
         return match($status) {
-            'processing' => "📋 Your request {$referenceNumber} is now being processed. We'll notify you when it's ready for pickup.",
-            'ready_for_pickup' => "📦 Your request {$referenceNumber} is ready for pickup! Your claiming number is: {$claimingNumber}. Please bring this when claiming your documents.",
+            'ready_for_pickup' => "📦 Your request {$referenceNumber} is ready for pickup! Please proceed to the registrar's office to claim your documents.",
             'received' => "✅ Thank you for picking up your documents for request {$referenceNumber}. Have a great day!",
             'cancelled' => "❌ Your request {$referenceNumber} has been cancelled. Please contact the registrar for more information.",
+            'completed' => "✅ Your documents for request {$referenceNumber} have been completed. Thank you for using CCST DocRequest!",
             default => "Your request {$referenceNumber} status has been updated to: " . ucfirst(str_replace('_', ' ', $status)),
         };
     }

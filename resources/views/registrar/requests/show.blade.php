@@ -23,13 +23,8 @@
                         @php
                             $statusConfig = [
                                 'pending' => ['label' => 'Pending', 'class' => 'status-pending'],
-                                'payment_method_set' => ['label' => 'Payment Method Set', 'class' => 'status-pending'],
-                                'payment_uploaded' => ['label' => 'Payment Uploaded', 'class' => 'status-pending'],
-                                'payment_rejected' => ['label' => 'Payment Rejected', 'class' => 'status-rejected'],
-                                'payment_verified' => ['label' => 'Payment Verified', 'class' => 'status-verified'],
-                                'processing' => ['label' => 'Processing', 'class' => 'status-processing'],
                                 'ready_for_pickup' => ['label' => 'Ready for Pickup', 'class' => 'status-ready'],
-                                'received' => ['label' => 'Received', 'class' => 'status-received'],
+                                'completed' => ['label' => 'Completed', 'class' => 'status-verified'],
                                 'cancelled' => ['label' => 'Cancelled', 'class' => 'status-cancelled'],
                             ];
                             $reqStatus = $statusConfig[$request->status] ?? ['label' => ucfirst($request->status), 'class' => ''];
@@ -41,42 +36,10 @@
             </div>
         </div>
 
-        {{-- Payment Status --}}
-        <div class="detail-section">
-            <h3><i class="bi bi-credit-card me-2"></i>Payment Details</h3>
-            <div class="detail-grid">
-                <div>
-                    <label>Payment Status:</label>
-                    @if($request->payment_status === 'paid')
-                        <span class="status-badge status-received"><i class="bi bi-check-circle-fill me-1"></i>Paid</span>
-                    @else
-                        <span class="status-badge status-pending"><i class="bi bi-clock me-1"></i>Unpaid</span>
-                    @endif
-                </div>
-                <div><label>Payment Method:</label>
-                    <strong>
-                        @if($request->payment_method === 'gcash') GCash
-                        @elseif($request->payment_method === 'bank_transfer') Bank Transfer
-                        @elseif($request->payment_method === 'cash') Over-the-Counter Cash
-                        @else —
-                        @endif
-                    </strong>
-                </div>
-                @if($request->receipt_number)
-                    <div><label>Receipt No.:</label> <strong>{{ $request->receipt_number }}</strong></div>
-                @endif
-                @if($request->cashier_name)
-                    <div><label>Cashier:</label> <strong>{{ $request->cashier_name }}</strong></div>
-                @endif
-                @if($request->paid_at)
-                    <div><label>Paid At:</label> <strong>{{ $request->paid_at->format('M d, Y h:i A') }}</strong></div>
-                @endif
-            </div>
-        </div>
-
-        {{-- Requested Documents --}}
+        {{-- Requested Documents (Print Selection) --}}
         <div class="detail-section">
             <h3><i class="bi bi-file-earmark-text me-2"></i>Requested Documents</h3>
+<<<<<<< HEAD
             <table class="docs-table">
                 <thead>
                     <tr>
@@ -108,94 +71,102 @@
                     @endforeach
                 </tbody>
             </table>
+=======
+            <form id="printSelectedForm">
+                @csrf
+                <input type="hidden" name="request_id" value="{{ $request->id }}">
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="selectAllDocs"></th>
+                            <th>Document Name</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($request->items as $item)
+                        @php
+                            $isPrinted = $request->generatedDocuments->where('document_type_id', $item->document_type_id)->isNotEmpty();
+                            $generatedDoc = $request->generatedDocuments->where('document_type_id', $item->document_type_id)->first();
+                        @endphp
+                        <tr>
+                            <td>
+                                @if($item->documentType->is_printable)
+                                    <input type="checkbox" name="document_item_ids[]" value="{{ $item->id }}" class="doc-checkbox">
+                                @else
+                                    <i class="bi bi-dash text-muted"></i>
+                                @endif
+                            </td>
+                            <td><strong>{{ $item->documentType->name }}</strong></td>
+                            <td class="text-center">{{ $item->copies }}</td>
+                            <td class="text-center">
+                                @if($isPrinted)
+                                    <span class="status-badge status-verified">Printed</span>
+                                @else
+                                    <span class="status-badge status-pending">Not Printed</span>
+                                @endif
+                            </td>
+                            <td class="text-end">
+                                @if($item->documentType->is_printable)
+                                    <button type="button" 
+                                            onclick="previewDocument({{ $request->id }}, {{ $item->document_type_id }}, '{{ $item->documentType->name }}')" 
+                                            class="btn-tiny {{ $isPrinted ? 'btn-view-file' : 'btn-generate-file' }}">
+                                        <i class="bi {{ $isPrinted ? 'bi-eye' : 'bi-file-pdf' }}"></i> 
+                                        {{ $isPrinted ? 'View' : 'Generate & Preview' }}
+                                    </button>
+                                @else
+                                    <span class="text-muted small">Manual Process</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                
+                @if($request->status === 'ready_for_pickup')
+                <div class="print-actions mt-4" style="display: flex; justify-content: center;">
+                    <button type="button" onclick="printSelectedDocuments()" class="btn-action btn-received w-64 py-3 shadow-sm" id="printSelectedBtn" disabled>
+                        <i class="bi bi-printer-fill me-2"></i> PRINT SELECTED DOCUMENTS
+                    </button>
+                </div>
+                @endif
+            </form>
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
         </div>
 
         {{-- Action Buttons --}}
         <div class="action-buttons">
-            {{-- Mark as Paid --}}
-            @if($request->payment_status === 'unpaid' && !in_array($request->status, ['cancelled']))
-                <button onclick="openMarkPaidModal()" class="btn-action btn-paid">
-                    <i class="bi bi-cash-stack"></i> Mark as Paid
+            {{-- Mark as Ready (for non-printable) --}}
+            @if($request->status === 'pending' && !$request->is_printable)
+                <button onclick="markAsReady({{ $request->id }})" class="btn-action btn-processing">
+                    <i class="bi bi-check-circle"></i> Mark as Ready for Pickup
                 </button>
             @endif
 
-            @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_rejected', 'payment_verified']))
-                <button onclick="updateStatus({{ $request->id }}, 'processing')" class="btn-action btn-processing">
-                    <i class="bi bi-gear"></i> Start Processing
-                </button>
-            @endif
-            
-            @if($request->status === 'processing')
-                <button onclick="updateStatus({{ $request->id }}, 'ready_for_pickup')" class="btn-action btn-ready">
-                    <i class="bi bi-box-seam"></i> Ready for Pickup
-                </button>
-            @endif
-            
-            @if($request->status === 'ready_for_pickup')
-                <button onclick="markReceived({{ $request->id }})" class="btn-action btn-received">
-                    <i class="bi bi-check2-all"></i> Mark as Received
-                </button>
-            @endif
-            
-            @if(!in_array($request->status, ['received', 'cancelled']))
-                <button onclick="updateStatus({{ $request->id }}, 'cancelled')" class="btn-action btn-cancelled">
-                    <i class="bi bi-x-circle"></i> Cancel Request
-                </button>
-            @endif
-        </div>
-
-        <div class="back-link">
-            <a href="{{ route('registrar.requests.index') }}" class="btn-back">
+            <a href="{{ route('registrar.requests.index') }}" class="btn-back mt-0">
                 <i class="bi bi-arrow-left me-1"></i> Back to Requests List
             </a>
         </div>
     </div>
 </div>
 
-{{-- Hidden forms for status updates --}}
-<form id="statusForm" method="POST" style="display:none;">
-    @csrf
-    @method('PATCH')
-    <input type="hidden" name="status" id="statusValue">
-</form>
-
-<form id="receivedForm" method="POST" style="display:none;">
-    @csrf
-    @method('PATCH')
-</form>
-
-<form id="markPaidForm" method="POST" action="{{ route('registrar.requests.markAsPaid', $request->id) }}" style="display:none;">
-    @csrf
-    @method('PATCH')
-    <input type="hidden" name="receipt_number" id="receiptNumberInput">
-    <input type="hidden" name="cashier_name" id="cashierNameInput">
-</form>
-
-{{-- Mark as Paid Modal --}}
-<div id="markPaidModal" class="modal-overlay" style="display:none;">
-    <div class="modal-container">
-        <div class="modal-header">
-            <h4><i class="bi bi-cash-stack me-2"></i>Mark as Paid</h4>
-            <button class="modal-close" onclick="closeMarkPaidModal()">&times;</button>
+{{-- PDF Preview Modal --}}
+<div id="previewModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width: 800px; width: 95%;">
+        <div class="modal-header" style="background: #1B6B3A;">
+            <h4 id="previewModalTitle">Document Preview</h4>
+            <button class="modal-close" onclick="closePreviewModal()">&times;</button>
         </div>
-        <div class="modal-body">
-            <p style="font-size:0.88rem; color:#555; margin-bottom:16px;">
-                Record that payment of <strong style="color:#1B6B3A;">₱{{ number_format($request->total_fee, 2) }}</strong> has been received from the student.
-            </p>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:0.78rem; font-weight:700; color:#555; text-transform:uppercase;">Receipt Number <span style="color:#DC3545;">*</span></label>
-                <input type="text" id="receiptNumberField" placeholder="e.g. OR-2024-00123"
-                    style="width:100%; padding:8px 12px; border:1px solid #D0DDD0; border-radius:6px; font-family:'Poppins',sans-serif; font-size:0.85rem; margin-top:4px;">
-            </div>
-            <div>
-                <label style="font-size:0.78rem; font-weight:700; color:#555; text-transform:uppercase;">Cashier Name (Optional)</label>
-                <input type="text" id="cashierNameField" placeholder="e.g. Maria Santos"
-                    style="width:100%; padding:8px 12px; border:1px solid #D0DDD0; border-radius:6px; font-family:'Poppins',sans-serif; font-size:0.85rem; margin-top:4px;">
-            </div>
+        <div class="modal-body p-0" style="height: 600px;">
+            <iframe id="previewIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
         </div>
         <div class="modal-footer">
-            <button class="btn-cancel-modal" onclick="closeMarkPaidModal()">Cancel</button>
-            <button class="btn-confirm-paid" onclick="submitMarkPaid()"><i class="bi bi-check-circle me-1"></i>Confirm Payment</button>
+            <button class="btn-cancel-modal" onclick="closePreviewModal()">Close</button>
+            <button class="btn-action btn-received" onclick="printFromPreview()" id="modalPrintBtn">
+                <i class="bi bi-printer"></i> Print
+            </button>
         </div>
     </div>
 </div>
@@ -214,15 +185,15 @@
         <div class="ccst-card-body p-0">
             <div class="rp-guide-step">
                 <span class="rp-step-num">1</span>
-                <span>Start processing when requirements are met</span>
+                <span>Generate and preview documents to verify information</span>
             </div>
             <div class="rp-guide-step">
                 <span class="rp-step-num">2</span>
-                <span>Mark ready when documents are printed</span>
+                <span>Select multiple documents for bulk printing and completion</span>
             </div>
             <div class="rp-guide-step" style="border-bottom:none;">
                 <span class="rp-step-num">3</span>
-                <span>Mark received once claimed by student</span>
+                <span>Completed requests are moved to the finalized list</span>
             </div>
         </div>
     </div>
@@ -315,55 +286,81 @@
         margin-top: 24px;
         padding-top: 20px;
         border-top: 1px solid #f0f0f0;
+        align-items: center;
     }
 
     .btn-action {
         color: white;
         border: none;
-        padding: 10px 20px;
+        padding: 10px 13px;
         border-radius: 6px;
         font-weight: 600;
         font-size: 0.85rem;
         cursor: pointer;
         transition: opacity 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
     }
     .btn-action:hover { opacity: 0.85; }
+    .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-processing { background: #1A9FE0; }
-    .btn-ready { background: #F5C518; color: #1A1A1A; }
+    .btn-processing { background: #17a2b8; }
     .btn-received { background: #1B6B3A; }
-    .btn-cancelled { background: #DC3545; }
-    .btn-paid { background: #6f42c1; }
 
-    /* Modal */
+    .btn-tiny {
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-view-file { background: #E8F4FD; color: #0969A2; }
+    .btn-generate-file { background: #F0F7F0; color: #1B6B3A; }
+    
+    .mt-4 { margin-top: 1.5rem; }
+    .w-100 { width: 100%; }
+    .w-75 { width: 75%; }
+    .w-64 { width: 64%; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+    .d-block { display: block; }
+
+    /* Modal Overlay */
     .modal-overlay {
-        position: fixed; top:0; left:0; right:0; bottom:0;
-        background: rgba(0,0,0,0.5); z-index:1000;
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); z-index: 2000;
         display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px);
     }
     .modal-container {
-        background: white; border-radius: 12px; width: 90%; max-width: 460px;
-        overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        background: white; border-radius: 12px; 
+        overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        animation: modalFadeIn 0.3s ease-out;
+    }
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     .modal-header {
-        background: #6f42c1; color: white; padding: 15px 20px;
+        color: white; padding: 15px 20px;
         display: flex; justify-content: space-between; align-items: center;
     }
-    .modal-header h4 { margin: 0; font-size: 1rem; }
-    .modal-close { background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; }
-    .modal-body { padding: 20px; }
+    .modal-header h4 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .modal-close { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
     .modal-footer {
         padding: 15px 20px; display: flex; justify-content: flex-end;
-        gap: 10px; border-top: 1px solid #f0f0f0;
+        gap: 12px; border-top: 1px solid #f0f0f0;
     }
     .btn-cancel-modal {
-        background: #f0f0f0; border: none; padding: 8px 20px;
+        background: #f8f9fa; border: 1px solid #ddd; padding: 8px 20px;
         border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif;
-    }
-    .btn-confirm-paid {
-        background: #6f42c1; color: white; border: none; padding: 8px 20px;
-        border-radius: 6px; cursor: pointer; font-family: 'Poppins', sans-serif;
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .btn-back {
@@ -371,14 +368,13 @@
         align-items: center;
         background: #f0f0f0;
         color: #666;
-        padding: 8px 20px;
+        padding: 10px 20px;
         border-radius: 6px;
         text-decoration: none;
-        font-size: 0.8rem;
-        margin-top: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
     }
     .btn-back:hover { background: #e0e0e0; color: #1A1A1A; }
-    .back-link { margin-top: 20px; }
 
     .status-badge {
         padding: 4px 12px;
@@ -387,144 +383,163 @@
         font-weight: 600;
     }
     .status-pending { background: #FFF3CD; color: #856404; }
-    .status-rejected { background: #F8D7DA; color: #721C24; }
-    .status-verified { background: #D4EDDA; color: #155724; }
-    .status-processing { background: #E8F4FD; color: #0969A2; }
-    .status-ready { background: #FFF3CD; color: #856404; }
-    .status-received { background: #D4EDDA; color: #155724; }
-    .status-cancelled { background: #F8D7DA; color: #721C24; }
+    .status-ready { background: #F5A623; color: white; }
+    .status-verified { background: #1B6B3A; color: white; }
+    .status-cancelled { background: #DC3545; color: white; }
 
     .rp-guide-step {
         display: flex;
         align-items: flex-start;
         gap: 10px;
-        padding: 9px 14px;
-        border-bottom: 1px solid rgba(255,255,255,0.2);
-        font-size: 0.78rem;
-        color: rgba(255,255,255,0.92);
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.9);
     }
     .rp-step-num {
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
-        border-radius: 50%;
-        background: #F5C518;
-        color: #1A1A1A;
-        font-size: 0.68rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 22px; height: 22px; min-width: 22px;
+        border-radius: 50%; background: #F5C518; color: #1A1A1A;
+        font-size: 0.7rem; font-weight: 800;
+        display: flex; align-items: center; justify-content: center;
     }
     .rp-date-card {
-        background: rgba(255,255,255,0.18);
-        border-radius: 10px;
-        padding: 16px;
-        text-align: center;
-        color: white;
-        backdrop-filter: blur(8px);
-        margin-bottom: 18px;
+        background: rgba(255,255,255,0.15); border-radius: 12px;
+        padding: 20px; text-align: center; color: white;
+        backdrop-filter: blur(8px); margin-bottom: 20px;
     }
-    .rp-date-day { font-size: 2.8rem; font-weight: 700; line-height: 1; }
-    .rp-date-month { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
-    .rp-date-time { font-size: 1rem; font-weight: 600; margin-top: 6px; }
-
-    .main-content {
-        overflow-y: hidden !important;
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - var(--header-h) - var(--footer-h));
-        padding-bottom: 0;
-    }
-    .main-content > .registrar-sticky-header { flex-shrink: 0; }
-    .main-content > .request-detail-scroll { flex: 1; min-height: 0; }
+    .rp-date-day { font-size: 3rem; font-weight: 800; line-height: 1; }
+    .rp-date-month { font-size: 0.9rem; opacity: 0.9; margin-top: 5px; font-weight: 500; }
+    .rp-date-time { font-size: 1.1rem; font-weight: 600; margin-top: 8px; }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-    function updateStatus(id, status) {
-        let title = '';
-        let text = '';
-        let confirmColor = '#1B6B3A';
-        
-        switch(status) {
-            case 'processing':
-                title = 'Start Processing?';
-                text = 'This will notify the student that their documents are being processed.';
-                confirmColor = '#1A9FE0';
-                break;
-            case 'ready_for_pickup':
-                title = 'Ready for Pickup?';
-                text = 'This will notify the student to claim their documents.';
-                confirmColor = '#F5C518';
-                break;
-            case 'cancelled':
-                title = 'Cancel Request?';
-                text = 'This will cancel the document request permanently.';
-                confirmColor = '#DC3545';
-                break;
-        }
+    let currentPreviewUrl = '';
 
+    function previewDocument(requestId, documentTypeId, docName) {
+        const url = `/registrar/documents/preview/${requestId}/${documentTypeId}`;
+        currentPreviewUrl = url;
+        
+        document.getElementById('previewModalTitle').textContent = `Preview: ${docName}`;
+        document.getElementById('previewIframe').src = url;
+        document.getElementById('previewModal').style.display = 'flex';
+    }
+
+    function closePreviewModal() {
+        document.getElementById('previewModal').style.display = 'none';
+        document.getElementById('previewIframe').src = '';
+    }
+
+    function printFromPreview() {
+        if (currentPreviewUrl) {
+            window.open(currentPreviewUrl, '_blank');
+        }
+    }
+
+    function printSelectedDocuments() {
+        const form = document.getElementById('printSelectedForm');
+        const formData = new FormData(form);
+        
         Swal.fire({
-            title: title,
-            text: text,
+            title: 'Generating Documents...',
+            text: 'Please wait while we prepare the PDFs.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch('{{ route("registrar.documents.print-selected") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    if (data.download_url) {
+                        window.open(data.download_url, '_blank');
+                    }
+                    window.location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message || 'Generation failed', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error', 'An unexpected error occurred.', 'error');
+        });
+    }
+
+    // Mark as ready for pickup (non-printable)
+    function markAsReady(id) {
+        Swal.fire({
+            title: 'Mark as Ready?',
+            text: 'This will notify the student that their documents are prepared and ready for pickup.',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonColor: confirmColor,
+            confirmButtonColor: '#17a2b8',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, proceed',
+            confirmButtonText: 'Yes, Mark as Ready',
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
-                const form = document.getElementById('statusForm');
-                form.action = `/registrar/requests/${id}/status`;
-                document.getElementById('statusValue').value = status;
-                form.submit();
+                fetch(`/registrar/requests/${id}/mark-ready`, {
+                    method: 'PATCH',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Success', data.message, 'success').then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to mark as ready', 'error');
+                    }
+                });
             }
         });
     }
 
-    function markReceived(id) {
-        Swal.fire({
-            title: 'Mark as Received?',
-            text: 'This confirms the student has claimed their documents. Payment will be automatically recorded. This action cannot be undone.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#1B6B3A',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, Mark as Received',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.getElementById('receivedForm');
-                form.action = `/registrar/requests/${id}/received`;
-                form.submit();
-            }
-        });
-    }
+    // Checkbox logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAll = document.getElementById('selectAllDocs');
+        const checkboxes = document.querySelectorAll('.doc-checkbox');
+        const printBtn = document.getElementById('printSelectedBtn');
 
-    function openMarkPaidModal() {
-        document.getElementById('receiptNumberField').value = '';
-        document.getElementById('cashierNameField').value = '';
-        document.getElementById('markPaidModal').style.display = 'flex';
-    }
-
-    function closeMarkPaidModal() {
-        document.getElementById('markPaidModal').style.display = 'none';
-    }
-
-    function submitMarkPaid() {
-        const receipt = document.getElementById('receiptNumberField').value.trim();
-        if (!receipt) {
-            Swal.fire('Required', 'Please enter the receipt number.', 'warning');
-            return;
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                updatePrintButton();
+            });
         }
-        document.getElementById('receiptNumberInput').value = receipt;
-        document.getElementById('cashierNameInput').value = document.getElementById('cashierNameField').value.trim();
-        closeMarkPaidModal();
-        document.getElementById('markPaidForm').submit();
-    }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updatePrintButton);
+        });
+
+        function updatePrintButton() {
+            const checkedCount = document.querySelectorAll('.doc-checkbox:checked').length;
+            if (printBtn) {
+                printBtn.disabled = checkedCount === 0;
+            }
+        }
+    });
 
     function updateTime() {
         const now = new Date();

@@ -94,6 +94,39 @@
 
             <div class="section-divider"></div>
 
+<<<<<<< HEAD
+=======
+            {{-- ════════════════════════════════════════════════════
+                 SECTION 3: PAYMENT DETAILS
+                 State A → pending            — choose method
+                 State B → payment_method_set — confirmed, next step
+                 State C → anything beyond    — locked, read-only
+            ════════════════════════════════════════════════════ --}}
+            @php
+                $status      = $docRequest->status;
+                $method      = $docRequest->payment_method;
+                $isSelecting = $status === 'pending';
+                $isConfirmed = $status === 'payment_method_set';
+                $isLocked    = !$isSelecting && !$isConfirmed;
+            @endphp
+
+            <div class="section-heading" style="margin-bottom:12px;">Payment Instruction</div>
+
+            <div class="payment-info-box" style="background: #F0F7F0; border: 1px solid #C3DEC9; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                <i class="bi bi-cash-stack" style="color: #1B6B3A; font-size: 1.2rem;"></i>
+                <div>
+                    <div style="font-weight: 700; color: #1B6B3A; font-size: 0.88rem;">Payment Method: Over-the-Counter Cash</div>
+                    <div style="color: #1B6B3A; font-size: 0.82rem;">Please pay at the cashier office on your appointment day.</div>
+                </div>
+            </div>
+
+            <div class="payment-instructions" style="background: #D1ECF1; border: 1px solid #bee5eb; border-radius: 8px; padding: 12px 14px; font-size: 0.8rem; color: #0c5460; margin-bottom: 16px;">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                Bring your school ID and reference number (<strong>{{ $docRequest->reference_number }}</strong>) to the cashier office.
+            </div>
+
+            <div class="section-divider"></div>
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
 
             <p class="note-text">
                 <strong>Note:</strong> Updates on your request status can be viewed in the
@@ -364,6 +397,7 @@
         background: #1A9FE0;
         color: white;
         font-weight: 700;
+<<<<<<< HEAD
         font-size: 0.85rem;
         padding: 10px 28px;
         border-radius: 6px;
@@ -509,6 +543,62 @@
 @push('scripts')
 <script>
 
+=======
+        font-siz�────────────────────
+   Called when a method pill is clicked.
+   1. Marks the clicked pill active, clears others.
+   2. Shows the matching detail block, hides all others.
+   3. Sets the hidden input value so the form knows what was picked.
+   4. Reveals the Confirm button with a readable label.
+─────────────────────────────────────────────────────────────────── */
+function selectMethod(method) {
+    // Pill active state
+    document.querySelectorAll('.method-pill').forEach(function (btn) {
+        btn.classList.toggle('active', btn.dataset.method === method);
+    });
+
+    // Show only the matching detail block
+    document.querySelectorAll('.method-block').forEach(function (block) {
+        block.style.display = 'none';
+    });
+    var block = document.getElementById('block-' + method);
+    if (block) block.style.display = 'block';
+
+    // Update hidden input
+    var input = document.getElementById('selected-method-input');
+    if (input) input.value = method;
+
+    // Show confirm button with readable label
+    var btnWrap = document.getElementById('confirm-btn-wrap');
+    if (btnWrap) btnWrap.style.display = 'block';
+
+    var labels  = { gcash: 'GCash', bank_transfer: 'Bank Transfer', cash: 'Over-the-Counter Cash' };
+    var labelEl = document.getElementById('selected-method-label');
+    if (labelEl) labelEl.textContent = 'Selected: ' + (labels[method] || method);
+}
+
+/* ── Guard: block form submit if no method was chosen ───────────────
+   Uses CcstAlert.warning() from the layout's shared alert system.
+─────────────────────────────────────────────────────────────────── */
+var confirmForm = document.getElementById('confirm-method-form');
+if (confirmForm) {
+    confirmForm.addEventListener('submit', function (e) {
+        if (!document.getElementById('selected-method-input').value) {
+            e.preventDefault();
+            CcstAlert.incomplete('Please choose a payment method before confirming.');
+        }
+    });
+}
+
+/* ── Toggle reselect panel (State B — change mind link) ─────────────
+   Shows/hides the re-selection pills under the confirmed state box.
+─────────────────────────────────────────────────────────────────── */
+function toggleReselect() {
+    var wrap = document.getElementById('reselect-wrap');
+    if (!wrap) return;
+    wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+}
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
 
 /* ── Cancel request ──────────────────────────────────────────────────
    Uses CcstAlert.cancel() from the layout's shared alert system.

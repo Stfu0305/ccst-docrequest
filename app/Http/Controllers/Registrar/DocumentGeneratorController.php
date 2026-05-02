@@ -117,17 +117,28 @@ class DocumentGeneratorController extends Controller
     }
     
     /**
-     * Generate all printable documents for a request
-     * GET /registrar/requests/{id}/generate-all
+     * Print selected documents for a request
+     * POST /registrar/documents/print-selected
      */
-    public function generateAll($requestId)
+    public function printSelected(Request $request)
     {
+        $validated = $request->validate([
+            'request_id' => 'required|exists:document_requests,id',
+            'document_item_ids' => 'required|array',
+            'document_item_ids.*' => 'exists:document_request_items,id',
+        ]);
+
         $documentRequest = DocumentRequest::with(['items.documentType', 'user'])
-            ->findOrFail($requestId);
+            ->findOrFail($validated['request_id']);
         
+        $itemIds = $validated['document_item_ids'];
         $generatedFiles = [];
         
         foreach ($documentRequest->items as $item) {
+            if (!in_array($item->id, $itemIds)) {
+                continue; // Skip if not selected
+            }
+            
             if (!$item->documentType->is_printable) {
                 continue; // Skip non-printable documents
             }
@@ -135,52 +146,100 @@ class DocumentGeneratorController extends Controller
             $data = $this->prepareDocumentData($documentRequest, $item->documentType, $item);
             $pdf = $this->loadTemplate($item->documentType->code, $data);
             
-            $fileName = $documentRequest->reference_number . '_' . $item->documentType->code . '.pdf';
+            $fileName = $documentRequest->reference_number . '_' . $item->documentType->code . '_' . time() . '.pdf';
             $filePath = 'generated_documents/' . $fileName;
             Storage::disk('local')->put($filePath, $pdf->output());
-            $generatedFiles[] = $filePath;
             
-            GeneratedDocument::create([
-                'document_request_id' => $documentRequest->id,
-                'document_type_id' => $item->document_type_id,
-                'file_path' => $filePath,
-                'printed_at' => now(),
-                'printed_by' => Auth::id(),
-            ]);
+            $generatedFiles[] = [
+                'full_path' => storage_path('app/private/' . $filePath),
+                'relative_path' => $filePath,
+                'name' => $fileName
+            ];
+            
+            // Mark as printed
+            GeneratedDocument::updateOrCreate(
+                [
+                    'document_request_id' => $documentRequest->id,
+                    'document_type_id' => $item->document_type_id,
+                ],
+                [
+                    'file_path' => $filePath,
+                    'printed_at' => now(),
+                    'printed_by' => Auth::id(),
+                ]
+            );
         }
         
         if (empty($generatedFiles)) {
-            return back()->with('error', 'No printable documents found for this request.');
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'No printable documents were generated.'], 400);
+            }
+            return back()->with('error', 'No printable documents were generated.');
         }
+
+        // Check if all printable documents are now printed
+        $printableItemsCount = $documentRequest->items->filter(function($item) {
+            return $item->documentType->is_printable;
+        })->count();
+
+        $printedItemsCount = GeneratedDocument::where('document_request_id', $documentRequest->id)
+            ->whereIn('document_type_id', $documentRequest->items->pluck('document_type_id'))
+            ->count();
+
+        if ($printableItemsCount > 0 && $printedItemsCount >= $printableItemsCount) {
+            $oldStatus = $documentRequest->status;
+            $documentRequest->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            // Log status change
+            \App\Models\StatusLog::create([
+                'document_request_id' => $documentRequest->id,
+                'changed_by' => Auth::id(),
+                'old_status' => $oldStatus,
+                'new_status' => 'completed',
+                'notes' => 'All documents printed. Request automatically marked as completed.',
+            ]);
+
+            // Notify student
+            $student = $documentRequest->user;
+            if ($student) {
+                $message = "✅ Your documents for request {$documentRequest->reference_number} are now complete and ready. Thank you!";
+                $this->sendNotification($student, $message, route('student.requests.history'));
+            }
+        }
+        
+        $downloadUrl = '';
         
         // Create ZIP file if multiple documents
         if (count($generatedFiles) > 1) {
-            $zipFileName = $documentRequest->reference_number . '_documents.zip';
-            $zipPath = storage_path('app/private/generated_documents/' . $zipFileName);
+            $zipFileName = $documentRequest->reference_number . '_documents_' . time() . '.zip';
+            $zipPathRelative = 'generated_documents/' . $zipFileName;
+            $zipPathFull = storage_path('app/private/' . $zipPathRelative);
             
             $zip = new ZipArchive();
-            if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
+            if ($zip->open($zipPathFull, ZipArchive::CREATE) === TRUE) {
                 foreach ($generatedFiles as $file) {
-                    $fullPath = storage_path('app/private/' . $file);
-                    $zip->addFile($fullPath, basename($file));
+                    $zip->addFile($file['full_path'], $file['name']);
                 }
                 $zip->close();
             }
-            
-            $message = "✅ All documents for request {$documentRequest->reference_number} have been generated.";
-            $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $documentRequest->id));
-            session()->flash('check_notifications', true);
-            
-            return response()->download($zipPath)->deleteFileAfterSend(true);
+            // For private storage, we need a special route to download
+            $downloadUrl = route('registrar.documents.download', ['path' => $zipPathRelative]);
+        } else {
+            $downloadUrl = route('registrar.documents.download', ['path' => $generatedFiles[0]['relative_path']]);
+        }
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Documents printed successfully.',
+                'download_url' => $downloadUrl
+            ]);
         }
         
-        // Single file - return PDF
-        $filePath = storage_path('app/private/' . $generatedFiles[0]);
-        $message = "✅ Document for request {$documentRequest->reference_number} has been generated.";
-        $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $documentRequest->id));
-        session()->flash('check_notifications', true);
-        
-        return response()->download($filePath)->deleteFileAfterSend(true);
+        return redirect()->away($downloadUrl);
     }
     
     /**
@@ -196,14 +255,26 @@ class DocumentGeneratorController extends Controller
         
         $requestedItem = $documentRequest->items->firstWhere('document_type_id', $documentTypeId);
         if (!$requestedItem) {
-            return back()->with('error', 'This document was not requested by the student.');
+            return response()->json(['error' => 'This document was not requested.'], 404);
         }
         
         $data = $this->prepareDocumentData($documentRequest, $documentType, $requestedItem);
-        
         $pdf = $this->loadTemplate($documentType->code, $data);
         
-        return $pdf->stream('preview.pdf');
+        return $pdf->stream($documentType->code . '_preview.pdf');
+    }
+
+    /**
+     * Download generated document
+     */
+    public function download(Request $request)
+    {
+        $path = $request->query('path');
+        if (!$path || !Storage::disk('local')->exists($path)) {
+            abort(404);
+        }
+        
+        return response()->download(storage_path('app/private/' . $path));
     }
     
     /**
@@ -265,10 +336,11 @@ class DocumentGeneratorController extends Controller
      */
     private function loadTemplate($documentCode, $data)
     {
-        switch ($documentCode) {
+        switch (strtoupper($documentCode)) {
             case 'COE':
                 return Pdf::loadView('pdf.coe-template', $data);
             case 'GMC':
+            case 'CGMC':
                 return Pdf::loadView('pdf.cgmc-template', $data);
             case 'REG':
                 return Pdf::loadView('pdf.reg-template', $data);

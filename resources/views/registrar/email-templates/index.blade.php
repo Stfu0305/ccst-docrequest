@@ -64,7 +64,7 @@
                     <textarea name="body" id="templateBody" class="form-textarea" rows="12" required></textarea>
                     <small class="form-hint">
                         Available variables: {{ student_name }}, {{ student_number }}, {{ reference_number }}, 
-                        {{ appointment_date }}, {{ time_slot }}, {{ claiming_number }}, {{ amount }}, {{ registrar_name }}
+                        {{ appointment_date }}, {{ time_slot }}, {{ amount }}, {{ registrar_name }}
                     </small>
                 </div>
             </div>
@@ -98,7 +98,7 @@
             <div class="rp-stat-row"><span>{{ reference_number }}</span><span>Request reference</span></div>
             <div class="rp-stat-row"><span>{{ appointment_date }}</span><span>Appointment date</span></div>
             <div class="rp-stat-row"><span>{{ time_slot }}</span><span>Time slot label</span></div>
-            <div class="rp-stat-row"><span>{{ claiming_number }}</span><span>Claiming number</span></div>
+
             <div class="rp-stat-row"><span>{{ amount }}</span><span>Payment amount</span></div>
             <div class="rp-stat-row" style="border-bottom:none;"><span>{{ registrar_name }}</span><span>Registrar name</span></div>
         </div>

@@ -335,7 +335,7 @@
     }
     .announcements-header { background: #F5C518; color: #1A1A1A; font-size: 0.9rem; font-weight: 700; padding: 14px 20px; }
     .announce-card { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-    .announce-card-body { flex: 1; min-height: 100px; }
+    .announce-card-body { flex: 1; min-height: 50px; }
     .announce-content { font-size: 0.88rem; line-height: 1.6; color: #444; }
     .announce-card-footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 10px; }
     .btn-edit { background: #F5C518; color: #1A1A1A; border: none; padding: 6px 18px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; cursor: pointer; }

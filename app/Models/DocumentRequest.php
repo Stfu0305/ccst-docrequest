@@ -17,26 +17,23 @@ class DocumentRequest extends Model
         'year_level',
         'section',
         'total_fee',
+        'document_types',
         'status',
-        'payment_status',
-        'payment_method',
         'claiming_number',
         'appointment_id',
         'processed_by',
         'remarks',
-        'paid_at',
-        'receipt_number',
-        'cashier_name',
         'is_walk_in',
         'walk_in_handled_by',
         'is_printable',
+        'completed_at',
     ];
 
     protected $casts = [
         'total_fee' => 'decimal:2',
-        'paid_at' => 'datetime',
         'is_walk_in' => 'boolean',
         'is_printable' => 'boolean',
+        'completed_at' => 'datetime',
     ];
 
     // Status constants
@@ -44,10 +41,6 @@ class DocumentRequest extends Model
     const STATUS_READY_FOR_PICKUP = 'ready_for_pickup';
     const STATUS_COMPLETED = 'completed';
     const STATUS_CANCELLED = 'cancelled';
-
-    // Payment status constants
-    const PAYMENT_UNPAID = 'unpaid';
-    const PAYMENT_PAID = 'paid';
 
     // Relationships
     public function user()
@@ -96,6 +89,21 @@ class DocumentRequest extends Model
         return $this->hasMany(StatusLog::class);
     }
 
+<<<<<<< HEAD
+=======
+    // Helper method to get document types as array
+    public function getDocumentTypesArrayAttribute()
+    {
+        return $this->document_types ? explode(',', $this->document_types) : [];
+    }
+    
+    // Helper method to set document types from array
+    public function setDocumentTypesArrayAttribute($value)
+    {
+        $this->attributes['document_types'] = is_array($value) ? implode(',', $value) : $value;
+    }
+
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
     // Scopes
     public function scopePending($query)
     {
@@ -115,16 +123,6 @@ class DocumentRequest extends Model
     public function scopeCancelled($query)
     {
         return $query->where('status', self::STATUS_CANCELLED);
-    }
-
-    public function scopeUnpaid($query)
-    {
-        return $query->where('payment_status', self::PAYMENT_UNPAID);
-    }
-
-    public function scopePaid($query)
-    {
-        return $query->where('payment_status', self::PAYMENT_PAID);
     }
 
     // Helper methods
@@ -148,16 +146,6 @@ class DocumentRequest extends Model
         return $this->status === self::STATUS_CANCELLED;
     }
 
-    public function isPaid(): bool
-    {
-        return $this->payment_status === self::PAYMENT_PAID;
-    }
-
-    public function isUnpaid(): bool
-    {
-        return $this->payment_status === self::PAYMENT_UNPAID;
-    }
-
     public function isPrintable(): bool
     {
         return $this->is_printable;
@@ -168,19 +156,12 @@ class DocumentRequest extends Model
         return $this->is_walk_in;
     }
 
-    public function markAsPaid($receiptNumber = null, $cashierName = null)
-    {
-        $this->update([
-            'payment_status' => self::PAYMENT_PAID,
-            'paid_at' => now(),
-            'receipt_number' => $receiptNumber,
-            'cashier_name' => $cashierName,
-        ]);
-    }
-
     public function markAsCompleted()
     {
-        $this->update(['status' => self::STATUS_COMPLETED]);
+        $this->update([
+            'status' => self::STATUS_COMPLETED,
+            'completed_at' => now(),
+        ]);
     }
 
     public function generateClaimingNumber()

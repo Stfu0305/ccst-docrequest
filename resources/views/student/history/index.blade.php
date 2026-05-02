@@ -118,7 +118,7 @@
                             <td style="padding:10px 8px;">
                                 @foreach($req->items as $item)
                                 <div style="font-size:0.78rem; color:#1A1A1A; line-height:1.5;">
-                                    {{ $item->documentType->name }}
+                                    <span class="fw-bold" title="{{ $item->documentType->name }}">{{ $item->documentType->code }}</span>
                                     <span style="color:#888;">× {{ $item->copies }}</span>
                                 </div>
                                 @endforeach
@@ -134,7 +134,6 @@
                                 <span class="hist-badge {{ $reqBadge['class'] }}">
                                     {{ $reqBadge['label'] }}
                                 </span>
-                                {{-- Removed claiming number from here --}}
                             </td>
 
                             </td>
@@ -144,24 +143,6 @@
                                         {{ date('M d', strtotime($appointment->appointment_date)) }}<br>
                                         {{ $appointment->timeSlot->label ?? '-' }}
                                     </div>
-                                    {{-- Claiming Number Button under appointment schedule --}}
-                                    @if($status === 'ready_for_pickup' && $req->claiming_number)
-                                    <button type="button"
-                                            class="hist-btn hist-btn--claiming"
-                                            onclick='showClaimingInfo({{ $req->id }}, "{{ $req->claiming_number }}", "{{ $req->reference_number }}", {{ json_encode($req->items->map(function($item) { return ['name' => $item->documentType->name, 'copies' => $item->copies, 'fee' => $item->fee]; })) }}, {{ $req->total_fee }})'
-                                            style="margin-top: 6px; width: auto; padding: 4px 12px; font-size: 0.65rem;">
-                                        <i class="bi bi-ticket-perforated me-1"></i>Claiming No.
-                                    </button>
-                                    @endif
-                                @elseif($status === 'ready_for_pickup' && $req->claiming_number)
-                                    <span class="hist-badge" style="background:#F0F0F0; color:#888; margin-bottom: 4px; display: inline-block;">No appointment</span>
-                                    <br>
-                                    <button type="button"
-                                            class="hist-btn hist-btn--claiming"
-                                            onclick='showClaimingInfo({{ $req->id }}, "{{ $req->claiming_number }}", "{{ $req->reference_number }}", {{ json_encode($req->items->map(function($item) { return ['name' => $item->documentType->name, 'copies' => $item->copies, 'fee' => $item->fee]; })) }}, {{ $req->total_fee }})'
-                                            style="margin-top: 4px; width: auto; padding: 2px 8px; font-size: 0.65rem;">
-                                        <i class="bi bi-ticket-perforated me-1"></i>Claiming No.
-                                    </button>
                                 @else
                                     <span class="hist-badge" style="background:#F0F0F0; color:#888;">Not booked</span>
                                 @endif
@@ -178,7 +159,7 @@
                                     @if($showBook)
                                     <button type="button"
                                             class="hist-btn hist-btn--book"
-                                            onclick="openBookModal({{ $req->id }}, '{{ $req->claiming_number }}')">
+                                            onclick="openBookModal({{ $req->id }})">
                                         <i class="bi bi-calendar-check me-1"></i>Book Slot
                                     </button>
                                     @endif
@@ -284,15 +265,6 @@
 
             <div style="font-size:0.82rem; color:#555; margin-bottom:14px; line-height:1.6;">
                 Choose a date and time slot to pick up your documents.
-                Bring your <strong>claiming number</strong> when you arrive.
-            </div>
-
-            <div id="modal-claiming-display"
-                 style="background:#F0F7F0; border:1px solid #C3DEC9; border-radius:6px;
-                        padding:8px 12px; font-size:0.82rem; color:#1B6B3A;
-                        font-weight:600; margin-bottom:14px;">
-                <i class="bi bi-ticket-perforated me-1"></i>
-                Claiming No.: <span id="modal-claiming-number">—</span>
             </div>
 
             <form id="book-appointment-form" method="POST"
@@ -334,29 +306,6 @@
     </div>
 </div>
 @endif
-
-{{-- ══════════════════════════════════════════════════════════════════
-     CLAIMING NUMBER INFO MODAL - Always available
-══════════════════════════════════════════════════════════════════ --}}
-<div id="claiming-modal-backdrop" class="modal-backdrop-custom" style="display:none;">
-    <div class="modal-box" style="max-width: 500px;">
-        <div class="modal-header-custom" style="background:#1B6B3A; justify-content:space-between;">
-            <div>
-                <i class="bi bi-ticket-perforated me-2"></i>Claiming Information
-            </div>
-            <button type="button"
-                    onclick="closeClaimingModal()"
-                    style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer; padding:0; margin:0; line-height:1;">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
-        <div class="modal-body-custom" style="padding:24px;">
-            <div id="claiming-content">
-                <!-- Dynamic content loaded via JavaScript -->
-            </div>
-        </div>
-    </div>
-</div>
 
 
 @endsection
@@ -406,17 +355,17 @@
     .hist-badge { display:inline-block; font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap; letter-spacing:0.2px; }
     .badge-pending      { background:#FFF3CD; color:#856404; }
     .badge-processing   { background:#E8F4FD; color:#0969A2; font-style:italic; }
-    .badge-ready        { background:#D4EDDA; color:#155724; font-weight:800; }
-    .badge-received     { background:#F0F0F0; color:#1A1A1A; font-weight:800; }
-    .badge-cancelled    { background:#F0F0F0; color:#888; text-decoration:line-through; }
-    .badge-verified     { background:#D4EDDA; color:#155724; }
+    .badge-ready        { background:#F5A623; color:white; font-weight:800; }
+    .badge-received     { background:#1B6B3A; color:white; font-weight:800; }
+    .badge-cancelled    { background:#DC3545; color:white; }
+    .badge-verified     { background:#1B6B3A; color:white; }
     .badge-rejected     { background:#F8D7DA; color:#721C24; }
     .badge-uploaded     { background:#FFF3CD; color:#856404; }
     .badge-not-uploaded { background:#F0F0F0; color:#888; }
     .badge-not-set      { background:#F0F0F0; color:#aaa; }
     .badge-pay-office   { background:#E8F4FD; color:#0969A2; }
 
-    .hist-btn { display:inline-flex; align-items:center; justify-content:center; font-size:0.70rem; font-weight:700; padding:4px 10px; border-radius:4px; border:none; cursor:pointer; text-decoration:none; white-space:nowrap; font-family:'Poppins',sans-serif; transition:opacity 0.15s; width:110px; }
+    .hist-btn { display:inline-flex; align-items:center; justify-content:center; font-size:0.70rem; font-weight:700; padding:4px 10px; border-radius:4px; border:none; cursor:pointer; text-decoration:none; white-space:nowrap; font-family:'Poppins',sans-serif; transition:opacity 0.15s; width:70px; }
     .hist-btn:hover { opacity:0.82; }
     .hist-btn--view     { background:#E8F4FD; color:#0969A2; }
     .hist-btn--upload   { background:#1A9FE0; color:white; }
@@ -484,139 +433,9 @@ function confirmCancel(requestId, refNumber) {
     });
 }
 
-function openBookModal(requestId, claimingNumber) {
+function openBookModal(requestId) {
     document.getElementById('modal-request-id').value = requestId;
-    document.getElementById('modal-claiming-number').textContent = claimingNumber || '—';
     document.getElementById('book-modal-backdrop').style.display = 'flex';
-}
-
-function cancelAppointment(appointmentId) {
-    Swal.fire({
-        title: 'Cancel Appointment?',
-        text: 'Are you sure you want to cancel your appointment? You can book a new one anytime.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, cancel it',
-        cancelButtonText: 'No, keep it',
-        confirmButtonColor: '#DC3545',
-        cancelButtonColor: '#F5C518',
-        reverseButtons: true
-    }).then(function (result) {
-        if (result.isConfirmed) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/student/appointments/' + appointmentId;
-            form.innerHTML = '@csrf @method("DELETE")';
-            document.body.appendChild(form);
-            form.submit();
-        }
-    });
-}
-
-function confirmCancelAppointment(appointmentId) {
-    Swal.fire({
-        title: 'Cancel Appointment?',
-        text: 'Are you sure you want to cancel your appointment? You can book a new one anytime.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, cancel it',
-        cancelButtonText: 'No, keep it',
-        confirmButtonColor: '#DC3545',
-        cancelButtonColor: '#F5C518',
-        reverseButtons: true
-    }).then(function (result) {
-        if (result.isConfirmed) {
-            document.getElementById('cancel-appointment-form-' + appointmentId).submit();
-        }
-    });
-}
-
-// ── Claiming Number Modal Functions ──
-function showClaimingInfo(requestId, claimingNumber, referenceNumber, documents, totalFee) {
-    const modal = document.getElementById('claiming-modal-backdrop');
-    const content = document.getElementById('claiming-content');
-    
-    // Build documents list HTML
-    let docsHtml = '';
-    documents.forEach(function(doc) {
-        docsHtml += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                <span style="font-size: 0.85rem; color: #1A1A1A;">
-                    <strong>${escapeHtml(doc.name)}</strong> × ${doc.copies}
-                </span>
-                <span style="font-size: 0.85rem; font-weight: 600; color: #1B6B3A;">
-                    ₱${(doc.fee * doc.copies).toFixed(2)}
-                </span>
-            </div>
-        `;
-    });
-    
-    content.innerHTML = `
-        <!-- Claiming Number - Large and Centered -->
-        <div style="text-align: center; margin-bottom: 24px;">
-            <div style="font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-                Claiming Number
-            </div>
-            <div style="font-size: 2.5rem; font-weight: 800; color: #1B6B3A; letter-spacing: 2px; background: #F0F7F0; padding: 12px; border-radius: 8px; display: inline-block; min-width: 200px;">
-                ${escapeHtml(claimingNumber)}
-            </div>
-        </div>
-        
-        <!-- Request Reference -->
-        <div style="margin-bottom: 20px; text-align: center;">
-            <div style="font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
-                Request Reference
-            </div>
-            <div style="font-size: 1.25rem; font-weight: 600; color: #1A1A1A;">
-                ${escapeHtml(referenceNumber)}
-            </div>
-        </div>
-        
-        <!-- Documents to Claim -->
-        <div style="margin-bottom: 20px;">
-            <div style="font-size: 0.7rem; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; margin-left: 15px;">
-                Documents to Claim
-            </div>
-            <div style="background: #f8f9fa; border-radius: 8px; padding: 8px 16px;">
-                ${docsHtml}
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; margin-top: 4px; border-top: 2px solid #D0DDD0;">
-                    <span style="font-size: 0.9rem; font-weight: 700; color: #1A1A1A;">Total Amount Paid</span>
-                    <span style="font-size: 1rem; font-weight: 800; color: #1B6B3A;">₱${parseFloat(totalFee).toFixed(2)}</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Instructions -->
-        <div style="background: #FFF3CD; border-radius: 8px; padding: 12px 16px; margin-top: 8px; border-left: 4px solid #F5C518;">
-            <div style="display: flex; gap: 10px;">
-                <i class="bi bi-info-circle-fill" style="color: #856404; font-size: 1rem;"></i>
-                <span style="font-size: 0.8rem; color: #856404; line-height: 1.4;">
-                    <strong>Important:</strong> Present this claiming number to the registrar when picking up your documents. Don't forget to bring a valid ID.
-                </span>
-            </div>
-        </div>
-    `;
-    
-    modal.style.display = 'flex';
-}
-
-function closeClaimingModal() {
-    document.getElementById('claiming-modal-backdrop').style.display = 'none';
-}
-
-// Helper function to escape HTML (add if not already present)
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function closeBookModal() {
-    document.getElementById('book-modal-backdrop').style.display = 'none';
 }
 
 document.addEventListener('DOMContentLoaded', function () {

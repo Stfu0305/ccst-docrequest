@@ -20,7 +20,7 @@ use App\Http\Controllers\Registrar\ReportController;
 use App\Http\Controllers\Registrar\NotificationController as RegistrarNotification;
 use App\Http\Controllers\Registrar\StudentVerificationController;
 use App\Http\Controllers\Registrar\CalendarController;
-use App\Http\Controllers\Registrar\WalkInController;
+// use App\Http\Controllers\Registrar\WalkInController;
 use App\Http\Controllers\Registrar\DocumentGeneratorController;
 use App\Http\Controllers\Registrar\EmailTemplateController;
 
@@ -135,7 +135,8 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::get('/requests/{id}', 'show')->name('requests.show');
         Route::patch('/requests/{id}/status', 'updateStatus')->name('requests.updateStatus');
         Route::patch('/requests/{id}/received', 'markReceived')->name('requests.markReceived');
-        Route::patch('/requests/{id}/mark-paid', 'markAsPaid')->name('requests.markAsPaid');
+        Route::patch('/requests/{id}/completed', 'markAsCompleted')->name('requests.completed');
+        Route::patch('/requests/{id}/mark-ready', [RequestManagementController::class, 'markAsReady'])->name('requests.mark-ready');
     });
 
     // ── Appointments Management ─────────────────────────────────────────
@@ -171,7 +172,7 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
     Route::patch('/account/profile', [RegistrarDashboard::class, 'updateProfile'])->name('account.updateProfile');
     Route::patch('/account/password', [RegistrarDashboard::class, 'updatePassword'])->name('account.updatePassword');
 
-    Route::get('/payments/{id}/proof', [RequestManagementController::class, 'serveProof'])->name('payments.proof');
+
 
     // ── Student Verification ──────────────────────────────────────────────
     Route::prefix('students')->name('students.')->group(function () {
@@ -198,11 +199,17 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
 
     // ── Document Generation ──────────────────────────────────────────────
     Route::prefix('documents')->name('documents.')->group(function () {
+<<<<<<< HEAD
         Route::get('/prepare/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'prepare'])->name('prepare');
         Route::post('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
         Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate-get');
         Route::get('/generate-all/{requestId}', [DocumentGeneratorController::class, 'generateAll'])->name('generate-all');
+=======
+        Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
+        Route::post('/print-selected', [DocumentGeneratorController::class, 'printSelected'])->name('print-selected');
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
         Route::get('/preview/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'preview'])->name('preview');
+        Route::get('/download', [DocumentGeneratorController::class, 'download'])->name('download');
     });
 
     // ── Calendar ──────────────────────────────────────────────────────────

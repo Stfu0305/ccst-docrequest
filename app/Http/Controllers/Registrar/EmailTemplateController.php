@@ -90,7 +90,7 @@ class EmailTemplateController extends Controller
             'reference_number' => 'DQST-2026-00042',
             'appointment_date' => now()->addDays(3)->format('F d, Y'),
             'time_slot' => '9:00 AM - 10:00 AM',
-            'claiming_number' => 'CLM-4AKZ29',
+
             'registrar_name' => auth()->user()->name,
             'school_name' => 'Clark College of Science and Technology',
         ];
@@ -122,7 +122,7 @@ class EmailTemplateController extends Controller
             ],
             'document_ready' => [
                 'subject' => 'Your Documents Are Ready for Pickup',
-                'body' => "Dear {{ student_name }},\n\nYour documents are now ready for pickup!\n\n📄 Reference Number: {{ reference_number }}\n🔑 Claiming Number: {{ claiming_number }}\n\nPlease book an appointment through the system to schedule your pickup.\n\nThank you!",
+                'body' => "Dear {{ student_name }},\n\nYour documents are now ready for pickup!\n\n📄 Reference Number: {{ reference_number }}\n\nPlease book an appointment through the system to schedule your pickup.\n\nThank you!",
             ],
         ];
     }

@@ -33,34 +33,37 @@ class DocumentRequestController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function store(Request $request)
     {
-        // ── STEP 1: Strip out empty rows BEFORE validation ───────────────────────
-        $rawDocuments = collect($request->input('documents', []))
-            ->filter(function ($doc) {
-                return !empty($doc['document_type_id'])
-                    && isset($doc['copies'])
-                    && (int) $doc['copies'] > 0;
-            })
-            ->values()
-            ->toArray();
-
-        $request->merge(['documents' => $rawDocuments]);
-
-        // ── STEP 2: Now validate ─────────────────────────────────────────────────
         $validated = $request->validate([
-            'contact_number'               => 'required|string|max:20',
-            'course_program'               => 'required|string|max:255',
-            'year_level'                   => 'required|string|max:20',
-            'section'                      => 'required|string|max:50',
-            'documents'                    => 'required|array|min:1',
-            'documents.*.document_type_id' => 'required|integer|exists:document_types,id',
-            'documents.*.copies'           => 'required|integer|min:1|max:99',
-            'documents.*.assessment_year'  => 'nullable|string|max:20',
-            'documents.*.semester'         => 'nullable|string|max:20',
+            'contact_number' => 'required|string',
+            'course_program' => 'required|string',
+            'year_level'     => 'required|string',
+            'section'        => 'required|string',
+            'documents'      => 'required|array',
+            'documents.*.document_type_id' => 'required|exists:document_types,id',
+            'documents.*.copies'           => 'required|integer|min:1',
+            'documents.*.assessment_year'  => 'nullable|string',
+            'documents.*.semester'         => 'nullable|string',
         ]);
 
         $user = Auth::user();
+        
+        // Collect document types and printability
+        $documentTypeCodes = [];
+        $allPrintable = true;
 
-        // Step 1: Create the DocumentRequest row.
+        foreach ($validated['documents'] as $doc) {
+            $docType = DocumentType::findOrFail($doc['document_type_id']);
+            $documentTypeCodes[] = $docType->code;
+            
+            if (!$docType->is_printable) {
+                $allPrintable = false;
+            }
+        }
+
+        // Determine initial status
+        $initialStatus = $allPrintable ? 'ready_for_pickup' : 'pending';
+
+        // Create the DocumentRequest
         $docRequest = DocumentRequest::create([
             'reference_number' => 'TEMP',
             'user_id'          => $user->id,
@@ -71,18 +74,17 @@ class DocumentRequestController extends Controller
             'year_level'       => $validated['year_level'],
             'section'          => $validated['section'],
             'total_fee'        => 0,
-            'status'           => 'pending',
-            'is_printable'     => false, // Will be set after checking document types
+            'document_types'   => implode(', ', $documentTypeCodes),
+            'status'           => $initialStatus,
+            'is_printable'     => $allPrintable,
         ]);
 
-        // Step 2: Generate the reference number
+        // Generate reference number
         $docRequest->update([
             'reference_number' => 'DQST-' . date('Y') . '-' . str_pad($docRequest->id, 5, '0', STR_PAD_LEFT),
         ]);
 
-        // Step 3: Create one DocumentRequestItem per selected document.
         $totalFee = 0;
-        $allPrintable = true;
 
         foreach ($validated['documents'] as $doc) {
             $docType = DocumentType::findOrFail($doc['document_type_id']);
@@ -97,35 +99,36 @@ class DocumentRequestController extends Controller
             ]);
 
             $totalFee += $docType->fee * $doc['copies'];
-
-            // Check if any document is non-printable
-            if (!$docType->is_printable) {
-                $allPrintable = false;
-            }
         }
 
-        // Step 4: Save the calculated total and printable flag
-        $docRequest->update([
-            'total_fee'     => $totalFee,
-            'is_printable'  => $allPrintable,
-        ]);
+        $docRequest->update(['total_fee' => $totalFee]);
 
-        // Step 5: Write the initial status log entry.
+        // Log status change
         StatusLog::create([
             'document_request_id' => $docRequest->id,
             'changed_by'          => $user->id,
             'old_status'          => null,
-            'new_status'          => 'pending',
+            'new_status'          => $initialStatus,
             'notes'               => 'Request submitted by student.',
         ]);
 
-        // Send notification to student
+        // Send notification
         $message = 'Your request has been submitted! Reference: ' . $docRequest->reference_number;
-        $url = route('student.requests.show', $docRequest->id);
-        $this->sendNotificationToCurrentUser($message, $url);
+        $this->sendNotificationToCurrentUser($message, route('student.requests.show', $docRequest->id));
         session()->flash('check_notifications', true);
 
+<<<<<<< HEAD
         // Redirect to summary with appointment modal, regardless of printability
+=======
+        // Redirect based on printability
+        if ($allPrintable) {
+            // Ready to print - can book appointment immediately
+            return redirect()->route('student.appointments.create', $docRequest->id)
+                ->with('success', 'Your request has been submitted! Please book an appointment for pickup.');
+        }
+
+        // Not ready to print - wait for registrar
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
         return redirect()->route('student.requests.show', $docRequest->id)
             ->with('show_appointment_modal', true)
             ->with('success', 'Your request has been submitted! Please book an appointment for pickup.');
@@ -141,6 +144,7 @@ class DocumentRequestController extends Controller
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
+<<<<<<< HEAD
         // Get time slots if appointment modal should be shown
         $timeSlots = null;
         $showAppointmentModal = session('show_appointment_modal', false);
@@ -151,6 +155,9 @@ class DocumentRequestController extends Controller
         }
 
         return view('student.requests.show', compact('docRequest', 'timeSlots', 'showAppointmentModal'));
+=======
+        return view('student.requests.show', compact('docRequest'));
+>>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
     }
 
     // ─────────────────────────────────────────────────────────────────────────

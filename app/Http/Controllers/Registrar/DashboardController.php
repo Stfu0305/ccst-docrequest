@@ -24,11 +24,6 @@ class DashboardController extends Controller
         $pendingRequests = DocumentRequest::whereIn('status', ['pending', 'ready_for_pickup'])->count();
         $todayAppointments = Appointment::whereDate('appointment_date', today())->where('status', 'scheduled')->count();
         
-        // Today's collections
-        $todayCollections = DocumentRequest::where('payment_status', 'paid')
-            ->whereDate('paid_at', today())
-            ->sum('total_fee');
-
         // Announcements
         $announcement = Announcement::general();
         $transactionDay = Announcement::transactionDays();
@@ -55,7 +50,6 @@ class DashboardController extends Controller
             'pendingVerifications',
             'pendingRequests',
             'todayAppointments',
-            'todayCollections',
             'announcement',
             'transactionDay',
             'weeklyLabels',
