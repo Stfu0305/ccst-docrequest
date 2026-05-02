@@ -137,11 +137,9 @@ class DocumentRequestController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function show($id)
     {
-        $docRequest = DocumentRequest::with(['items.documentType', 'paymentProof'])
+        $docRequest = DocumentRequest::with(['items.documentType'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
-
-        $paymentSettings = \App\Models\PaymentSetting::where('is_active', true)->get()->keyBy('method');
 
         // Get time slots if appointment modal should be shown
         $timeSlots = null;
@@ -152,7 +150,7 @@ class DocumentRequestController extends Controller
             session()->forget('show_appointment_modal');
         }
 
-        return view('student.requests.show', compact('docRequest', 'paymentSettings', 'timeSlots', 'showAppointmentModal'));
+        return view('student.requests.show', compact('docRequest', 'timeSlots', 'showAppointmentModal'));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

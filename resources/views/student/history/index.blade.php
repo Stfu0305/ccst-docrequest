@@ -71,7 +71,6 @@
                             <th>Documents</th>
                             <th style="width:80px;" class="text-center">Total</th>
                             <th style="width:120px;" class="text-center">Request Status</th>
-                            <th style="width:120px;" class="text-center">Payment Status</th>
                             <th style="width:120px;" class="text-center">Appointment</th>
                             <th style="width:160px;" class="text-center">Actions</th>
                         </tr>
@@ -80,9 +79,6 @@
                         @foreach($requests as $index => $req)
                         @php
                             $status      = $req->status;
-                            $method      = $req->payment_method;
-                            $proof       = $req->paymentProof;
-                            $receipt     = $req->officialReceipt;
                             $appointment = $req->appointment;
                             
                             // Check if appointment exists and is active (scheduled)
@@ -91,25 +87,6 @@
                             // Determine which cancel button to show
                             $showCancelAppointment = $hasActiveAppointment;
                             $showCancelRequest = $status === 'pending' && !$hasActiveAppointment;
-
-                            $payBadge = match(true) {
-                                $status === 'cancelled'
-                                    => ['label' => 'Cancelled',    'class' => 'badge-cancelled'],
-                                is_null($method)
-                                    => ['label' => 'Not Set',      'class' => 'badge-not-set'],
-                                $method === 'cash' && in_array($status, ['pending','payment_method_set'])
-                                    => ['label' => 'Pay at Office','class' => 'badge-pay-office'],
-                                $status === 'payment_method_set' && $method !== 'cash'
-                                    => ['label' => 'Not Uploaded', 'class' => 'badge-not-uploaded'],
-                                $status === 'payment_uploaded'
-                                    => ['label' => 'Uploaded',     'class' => 'badge-uploaded'],
-                                $status === 'payment_rejected'
-                                    => ['label' => 'Rejected',     'class' => 'badge-rejected'],
-                                in_array($status, ['payment_verified','processing','ready_for_pickup','received'])
-                                    => ['label' => 'Verified',     'class' => 'badge-verified'],
-                                default
-                                    => ['label' => '—',            'class' => 'badge-not-set'],
-                            };
 
                             $reqBadge = match($status) {
                                 'pending'            => ['label' => 'Pending',          'class' => 'badge-pending'],
@@ -124,12 +101,6 @@
                                 default              => ['label' => $status,            'class' => 'badge-not-set'],
                             };
 
-                            $showUpload   = in_array($method, ['gcash','bank_transfer'])
-                                            && $status === 'payment_method_set';
-                            $showReupload = $status === 'payment_rejected'
-                                            && is_null($proof?->verified_at);
-                            $showReceipt  = $receipt !== null
-                                            && in_array($status, ['payment_verified','processing','ready_for_pickup','received']);
                             $showBook     = $status === 'ready_for_pickup'
                                             && !$hasActiveAppointment;
                         @endphp
@@ -166,18 +137,6 @@
                                 {{-- Removed claiming number from here --}}
                             </td>
 
-                            <td class="text-center" style="padding:10px 8px;">
-                                <span class="hist-badge {{ $payBadge['class'] }}">
-                                    {{ $payBadge['label'] }}
-                                </span>
-                                @if($status === 'payment_rejected' && $proof?->rejection_reason)
-                                <div style="font-size:0.68rem; color:#DC3545; margin-top:3px;
-                                            max-width:110px; margin-left:auto; margin-right:auto;
-                                            line-height:1.3; word-break:break-word;"
-                                    title="{{ $proof->rejection_reason }}">
-                                    {{ Str::limit($proof->rejection_reason, 40) }}
-                                </div>
-                                @endif
                             </td>
                             <td class="text-center" style="padding:10px 8px;">
                                 @if($appointment && $appointment->status === 'scheduled')
@@ -215,28 +174,6 @@
                                     class="hist-btn hist-btn--view">
                                         <i class="bi bi-eye me-1"></i>View
                                     </a>
-
-                                    @if($showUpload)
-                                    <a href="{{ route('student.payments.showUpload', $req->id) }}"
-                                    class="hist-btn hist-btn--upload">
-                                        <i class="bi bi-upload me-1"></i>Upload Proof
-                                    </a>
-                                    @endif
-
-                                    @if($showReupload)
-                                    <a href="{{ route('student.payments.showUpload', $req->id) }}"
-                                    class="hist-btn hist-btn--reupload"
-                                    title="Reason: {{ $proof?->rejection_reason }}">
-                                        <i class="bi bi-arrow-repeat me-1"></i>Re-upload
-                                    </a>
-                                    @endif
-
-                                    @if($showReceipt)
-                                    <a href="{{ route('student.receipts.download', $req->id) }}"
-                                    class="hist-btn hist-btn--receipt">
-                                        <i class="bi bi-download me-1"></i>Receipt
-                                    </a>
-                                    @endif
 
                                     @if($showBook)
                                     <button type="button"

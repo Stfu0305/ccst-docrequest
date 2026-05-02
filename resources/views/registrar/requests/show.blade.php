@@ -84,6 +84,7 @@
                         <th class="text-center">Year/Sem</th>
                         <th class="text-center">Copies</th>
                         <th class="text-end">Fee</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,6 +94,16 @@
                         <td class="text-center">{{ $item->assessment_year ?? 'N/A' }} / {{ $item->semester ?? 'N/A' }}</td>
                         <td class="text-center">{{ $item->copies }}</td>
                         <td class="text-end">₱{{ number_format($item->fee * $item->copies, 2) }}</td>
+                        <td class="text-center">
+                            @if($item->documentType->is_printable)
+                                <a href="{{ route('registrar.documents.prepare', [$request->id, $item->document_type_id]) }}" 
+                                   class="btn btn-sm btn-primary">
+                                    <i class="bi bi-pencil-square me-1"></i> Prepare
+                                </a>
+                            @else
+                                <span class="text-muted small">Not Printable</span>
+                            @endif
+                        </td>
                     </tr>
                     @endforeach
                 </tbody>

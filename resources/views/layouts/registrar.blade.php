@@ -601,6 +601,9 @@
                 <a href="{{ route('registrar.requests.index') }}" class="{{ request()->routeIs('registrar.requests.*') ? 'active' : '' }}">
                     Pending
                 </a>
+                <a href="{{ route('registrar.walkin.index') }}" class="{{ request()->routeIs('registrar.walkin.*') ? 'active' : '' }}">
+                    Walk-In Mode
+                </a>
                 <a href="{{ route('registrar.calendar') }}" class="{{ request()->routeIs('registrar.calendar') ? 'active' : '' }}">
                     Calendar
                 </a>

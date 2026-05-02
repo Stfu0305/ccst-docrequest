@@ -131,12 +131,15 @@
                                 </a>
                                 
                                 {{-- Generate Document Button (for printable documents) --}}
-                                @if($request->status === 'payment_verified' || $request->status === 'ready_for_pickup')
+                                @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_verified', 'processing', 'ready_for_pickup']))
                                     @foreach($request->items as $item)
                                         @if($item->documentType->is_printable)
-                                            <a href="{{ route('registrar.documents.generate', [$request->id, $item->document_type_id]) }}" 
-                                               class="action-btn-generate" target="_blank">
-                                                <i class="bi bi-file-pdf"></i> Generate {{ $item->documentType->code }}
+                                            @php
+                                                $isDocx = $item->documentType->template_path && \Illuminate\Support\Facades\Storage::exists($item->documentType->template_path);
+                                            @endphp
+                                            <a href="{{ route('registrar.documents.prepare', [$request->id, $item->document_type_id]) }}" 
+                                               class="action-btn-generate" title="Prepare {{ $item->documentType->name }}">
+                                                <i class="bi {{ $isDocx ? 'bi-file-earmark-word' : 'bi-file-pdf' }}"></i> {{ $item->documentType->code }}
                                             </a>
                                         @endif
                                     @endforeach

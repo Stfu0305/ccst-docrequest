@@ -18,10 +18,30 @@ class DocumentGeneratorController extends Controller
     use SendsDatabaseNotifications;
 
     /**
-     * Generate a single document
-     * GET /registrar/requests/{id}/generate/{document_type_id}
+     * Show preview/edit form before generation
      */
-    public function generate($requestId, $documentTypeId)
+    public function prepare($requestId, $documentTypeId)
+    {
+        $documentRequest = DocumentRequest::with(['user', 'items.documentType'])
+            ->findOrFail($requestId);
+        
+        $documentType = DocumentType::findOrFail($documentTypeId);
+        
+        $requestedItem = $documentRequest->items->firstWhere('document_type_id', $documentTypeId);
+        if (!$requestedItem) {
+            return back()->with('error', 'This document was not requested.');
+        }
+        
+        $data = $this->prepareDocumentData($documentRequest, $documentType, $requestedItem);
+        
+        return view('registrar.documents.prepare', compact('documentRequest', 'documentType', 'data', 'requestId', 'documentTypeId'));
+    }
+
+    /**
+     * Generate a single document
+     * GET/POST /registrar/requests/{id}/generate/{document_type_id}
+     */
+    public function generate(Request $request, $requestId, $documentTypeId)
     {
         $documentRequest = DocumentRequest::with(['user', 'items.documentType'])
             ->findOrFail($requestId);
@@ -34,6 +54,36 @@ class DocumentGeneratorController extends Controller
             return back()->with('error', 'This document was not requested by the student.');
         }
         
+        // Get custom data from form if it exists
+        $customData = $request->except(['_token']);
+
+        // 1. CHECK FOR .DOCX TEMPLATE
+        if ($documentType->template_path && Storage::exists($documentType->template_path)) {
+            try {
+                $service = new \App\Services\DocumentGeneratorService();
+                $filePath = $service->generateFromTemplate($documentRequest, $documentType, $requestedItem, $customData);
+                
+                // Record the generation
+                GeneratedDocument::create([
+                    'document_request_id' => $documentRequest->id,
+                    'document_type_id' => $documentType->id,
+                    'file_path' => $filePath,
+                    'printed_at' => now(),
+                    'printed_by' => Auth::id(),
+                ]);
+
+                // Notify
+                $message = "✅ Document '{$documentType->name}' for request {$documentRequest->reference_number} has been generated (.docx).";
+                $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $documentRequest->id));
+                session()->flash('check_notifications', true);
+
+                return response()->download(Storage::path($filePath));
+            } catch (\Exception $e) {
+                return back()->with('error', 'Error generating .docx: ' . $e->getMessage());
+            }
+        }
+
+        // 2. FALLBACK TO PDF
         // Prepare data for template
         $data = $this->prepareDocumentData($documentRequest, $documentType, $requestedItem);
         
@@ -58,7 +108,7 @@ class DocumentGeneratorController extends Controller
         ]);
         
         // Send notification to registrar
-        $message = "✅ Document '{$documentType->name}' for request {$documentRequest->reference_number} has been generated.";
+        $message = "✅ Document '{$documentType->name}' for request {$documentRequest->reference_number} has been generated (PDF).";
         $this->sendNotificationToCurrentUser($message, route('registrar.requests.show', $documentRequest->id));
         session()->flash('check_notifications', true);
         

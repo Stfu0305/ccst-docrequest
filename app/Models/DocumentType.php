@@ -14,6 +14,7 @@ class DocumentType extends Model
         'has_school_year',
         'is_printable',
         'is_active',
+        'template_path',
     ];
 
     protected $casts = [

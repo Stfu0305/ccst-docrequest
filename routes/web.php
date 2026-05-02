@@ -193,11 +193,14 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::post('/store', [WalkInController::class, 'store'])->name('store');
         Route::post('/request', [WalkInController::class, 'createRequest'])->name('request');
         Route::get('/payment/{id}', [WalkInController::class, 'printPayment'])->name('payment');
+        Route::patch('/payment/{id}/complete', [WalkInController::class, 'completePayment'])->name('payment.complete');
     });
 
     // ── Document Generation ──────────────────────────────────────────────
     Route::prefix('documents')->name('documents.')->group(function () {
-        Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
+        Route::get('/prepare/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'prepare'])->name('prepare');
+        Route::post('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
+        Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate-get');
         Route::get('/generate-all/{requestId}', [DocumentGeneratorController::class, 'generateAll'])->name('generate-all');
         Route::get('/preview/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'preview'])->name('preview');
     });

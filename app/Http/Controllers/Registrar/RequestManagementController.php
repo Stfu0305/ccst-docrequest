@@ -15,7 +15,7 @@ class RequestManagementController extends Controller
 
     public function index()
     {
-        $requests = DocumentRequest::with(['items.documentType', 'paymentProof', 'appointment.timeSlot', 'user'])
+        $requests = DocumentRequest::with(['items.documentType', 'appointment.timeSlot', 'user'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -32,7 +32,7 @@ class RequestManagementController extends Controller
 
     public function show($id)
     {
-        $request = DocumentRequest::with(['items.documentType', 'paymentProof', 'appointment.timeSlot', 'user'])
+        $request = DocumentRequest::with(['items.documentType', 'appointment.timeSlot', 'user'])
             ->findOrFail($id);
 
         return view('registrar.requests.show', compact('request'));
