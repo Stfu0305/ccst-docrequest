@@ -125,16 +125,10 @@ class DocumentRequestController extends Controller
         $this->sendNotificationToCurrentUser($message, $url);
         session()->flash('check_notifications', true);
 
-        // Step 6: Redirect based on document printability
-        if ($allPrintable) {
-            // All documents are printable - redirect to appointment booking
-            return redirect()->route('student.appointments.create', $docRequest->id)
-                ->with('success', 'Your request has been submitted! Please book an appointment for pickup.');
-        }
-
-        // Some documents require processing - redirect to summary
+        // Redirect to summary with appointment modal, regardless of printability
         return redirect()->route('student.requests.show', $docRequest->id)
-            ->with('info', 'Your request has been submitted. You will be notified when your documents are ready for pickup.');
+            ->with('show_appointment_modal', true)
+            ->with('success', 'Your request has been submitted! Please book an appointment for pickup.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -149,7 +143,16 @@ class DocumentRequestController extends Controller
 
         $paymentSettings = \App\Models\PaymentSetting::where('is_active', true)->get()->keyBy('method');
 
-        return view('student.requests.show', compact('docRequest', 'paymentSettings'));
+        // Get time slots if appointment modal should be shown
+        $timeSlots = null;
+        $showAppointmentModal = session('show_appointment_modal', false);
+        if ($showAppointmentModal) {
+            $timeSlots = \App\Models\TimeSlot::where('is_active', true)->orderBy('start_time')->get();
+            // Clear the session flag so modal doesn't show again on refresh
+            session()->forget('show_appointment_modal');
+        }
+
+        return view('student.requests.show', compact('docRequest', 'paymentSettings', 'timeSlots', 'showAppointmentModal'));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

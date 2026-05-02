@@ -139,12 +139,44 @@ class AppointmentController extends Controller
 
     public function printCashierList()
     {
-        $todayAppointments = Appointment::with(['student', 'documentRequest', 'timeSlot'])
-            ->whereDate('appointment_date', today())
-            ->orderBy('time_slot_id', 'asc')
-            ->get()
+        $range = request('range', 'today');
+        $query = Appointment::with(['student', 'documentRequest', 'timeSlot'])
+            ->orderBy('appointment_date', 'desc')
+            ->orderBy('time_slot_id', 'asc');
+
+        switch ($range) {
+            case 'today':
+                $query->whereDate('appointment_date', today());
+                $dateLabel = today()->format('F d, Y');
+                break;
+            case 'last_week':
+                $start = now()->subWeek()->startOfWeek();
+                $end = now()->subWeek()->endOfWeek();
+                $query->whereBetween('appointment_date', [$start, $end]);
+                $dateLabel = $start->format('M d') . ' - ' . $end->format('M d, Y');
+                break;
+            case 'last_month':
+                $query->whereMonth('appointment_date', now()->subMonth()->month)
+                      ->whereYear('appointment_date', now()->subMonth()->year);
+                $dateLabel = now()->subMonth()->format('F Y');
+                break;
+            case 'last_year':
+                $query->whereYear('appointment_date', now()->subYear()->year);
+                $dateLabel = now()->subYear()->format('Y');
+                break;
+            case 'all':
+                $dateLabel = 'All Appointments';
+                break;
+            default:
+                $query->whereDate('appointment_date', today());
+                $dateLabel = today()->format('F d, Y');
+                break;
+        }
+
+        $appointments = $query->get()
             ->map(function ($appointment) {
                 return (object) [
+                    'date' => \Carbon\Carbon::parse($appointment->appointment_date)->format('M d, Y'),
                     'time_slot' => $appointment->timeSlot->label ?? '—',
                     'student_name' => $appointment->student->full_name ?? $appointment->student->name,
                     'student_number' => $appointment->student->student_number,
@@ -158,14 +190,14 @@ class AppointmentController extends Controller
                 ];
             });
 
-        $date = today()->format('F d, Y');
+        $date = $dateLabel;
         $printed_by = auth()->user()->name;
-        $totalAmount = $todayAppointments->sum('amount');
-        $totalStudents = $todayAppointments->count();
+        $totalAmount = $appointments->sum('amount');
+        $totalStudents = $appointments->count();
 
-        $pdf = Pdf::loadView('pdf.cashier-list', compact('todayAppointments', 'date', 'printed_by', 'totalAmount', 'totalStudents'));
+        $pdf = Pdf::loadView('pdf.cashier-list', compact('appointments', 'date', 'printed_by', 'totalAmount', 'totalStudents'));
         
-        return $pdf->stream('cashier-list-' . today()->format('Y-m-d') . '.pdf');
+        return $pdf->stream('cashier-list-' . now()->format('Y-m-d') . '.pdf');
     }
 
 }

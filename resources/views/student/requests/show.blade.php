@@ -393,6 +393,8 @@
         </div>{{-- end req-card-body --}}
     </div>{{-- end req-card --}}
 
+
+
     {{-- ── BOTTOM ACTION BUTTONS ── --}}
     <div class="submit-row">
         <a href="{{ route('student.dashboard') }}" class="btn-cancel">Back to Home</a>
@@ -412,6 +414,49 @@
     </div>
 
 </div>{{-- end req-scroll --}}
+
+{{-- ── APPOINTMENT MODAL ── --}}
+@if($showAppointmentModal && $timeSlots)
+<div id="appointment-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Book Your Pickup Appointment</h3>
+            <button type="button" class="modal-close" onclick="closeAppointmentModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="appointment-summary">
+                <p><strong>Request:</strong> {{ $docRequest->reference_number }}</p>
+                <p><strong>Total Amount:</strong> ₱{{ number_format($docRequest->total_fee, 2) }}</p>
+            </div>
+
+            <form id="appointment-form" method="POST" action="{{ route('student.appointments.store') }}">
+                @csrf
+                <input type="hidden" name="document_request_id" value="{{ $docRequest->id }}">
+
+                <div class="form-group">
+                    <label>Pickup Date</label>
+                    <input type="text" name="appointment_date" id="modal-appointment-date" class="form-input" readonly required>
+                </div>
+
+                <div class="form-group">
+                    <label>Available Time Slots</label>
+                    <div id="time-slots-container">
+                        <div style="padding: 15px; text-align: center; color: #666; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc;">
+                            Please select a pickup date first to view available time slots.
+                        </div>
+                    </div>
+                    <input type="hidden" name="time_slot_id" id="selected-time-slot" value="">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeAppointmentModal()">Skip for Now</button>
+                    <button type="submit" class="btn-submit" id="book-appointment-btn" disabled>Book Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 
 @endsection
 
@@ -641,6 +686,108 @@
         max-width: 900px;
     }
 
+    /* ── Appointment Modal ── */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+    }
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid #D0DDD0;
+        background: #1B6B3A;
+        color: white;
+        border-radius: 12px 12px 0 0;
+    }
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-body {
+        padding: 24px;
+    }
+    .appointment-summary {
+        background: #F0F7F0;
+        border: 1px solid #C3DEC9;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+    .appointment-summary p {
+        margin: 8px 0;
+        font-size: 0.9rem;
+        color: #1A1A1A;
+    }
+    .time-slot-option {
+        border: 2px solid #D0DDD0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+    }
+    .time-slot-option:hover {
+        border-color: #1B6B3A;
+        background: #F0F7F0;
+    }
+    .time-slot-option.selected {
+        border-color: #1B6B3A;
+        background: #1B6B3A;
+        color: white;
+    }
+    .time-slot-label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+    }
+    .time-slot-capacity {
+        font-size: 0.8rem;
+        color: #666;
+    }
+    .time-slot-option.selected .time-slot-capacity {
+        color: #E8F5E8;
+    }
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
 </style>
 @endpush
 
@@ -722,6 +869,127 @@ if (cancelBtn) {
         });
     });
 }
+
+/* ── Appointment Modal Functions ────────────────────────────────────
+   Handle appointment booking modal functionality.
+─────────────────────────────────────────────────────────────────── */
+@if($showAppointmentModal && $timeSlots)
+function selectTimeSlot(slotId, label) {
+    // Remove selected class from all options
+    document.querySelectorAll('.time-slot-option').forEach(function(option) {
+        option.classList.remove('selected');
+    });
+
+    // Add selected class to clicked option
+    var selectedOption = document.querySelector('[data-slot-id="' + slotId + '"]');
+    if (selectedOption) {
+        selectedOption.classList.add('selected');
+    }
+
+    // Set hidden input value
+    document.getElementById('selected-time-slot').value = slotId;
+
+    // Enable book button
+    document.getElementById('book-appointment-btn').disabled = false;
+}
+
+function closeAppointmentModal() {
+    document.getElementById('appointment-modal').style.display = 'none';
+}
+
+// Form validation before submission
+document.addEventListener('DOMContentLoaded', function() {
+    var appointmentForm = document.getElementById('appointment-form');
+    if (appointmentForm) {
+        appointmentForm.addEventListener('submit', function(e) {
+            var dateInput = document.getElementById('modal-appointment-date');
+            var timeSlotInput = document.getElementById('selected-time-slot');
+
+            if (!dateInput.value) {
+                e.preventDefault();
+                CcstAlert.warning('Please select a pickup date.');
+                return;
+            }
+
+            if (!timeSlotInput.value) {
+                e.preventDefault();
+                CcstAlert.warning('Please select a time slot.');
+                return;
+            }
+        });
+    }
+
+    // Initialize date picker for appointment modal
+    var dateInput = document.getElementById('modal-appointment-date');
+    if (dateInput) {
+        // Initialize flatpickr for date selection
+        flatpickr(dateInput, {
+            minDate: 'today',
+            dateFormat: 'Y-m-d',
+            disable: [
+                function(date) {
+                    // Disable weekends (Saturday = 6, Sunday = 0)
+                    return (date.getDay() === 0 || date.getDay() === 6);
+                }
+            ],
+            onChange: function(selectedDates, dateStr, instance) {
+                const container = document.getElementById('time-slots-container');
+                container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666;">Loading available time slots...</div>';
+                
+                // Clear selected slot
+                document.getElementById('selected-time-slot').value = '';
+                document.getElementById('book-appointment-btn').disabled = true;
+
+                // Fetch available time slots for the selected date
+                fetch('{{ route('student.appointments.available-slots') }}?date=' + dateStr)
+                    .then(response => response.json())
+                    .then(data => {
+                        container.innerHTML = ''; // clear current
+
+                        if (data.length === 0) {
+                            container.innerHTML = '<div style="padding: 15px; text-align: center; color: #666; background: #f8f9fa; border-radius: 8px;">No time slots available for this date.</div>';
+                            return;
+                        }
+
+                        data.forEach(slot => {
+                            const isFull = slot.is_full;
+                            const option = document.createElement('div');
+                            option.className = 'time-slot-option';
+                            option.dataset.slotId = slot.id;
+                            
+                            if (isFull) {
+                                option.style.opacity = '0.5';
+                                option.style.cursor = 'not-allowed';
+                                option.style.background = '#f8f9fa';
+                                option.style.borderStyle = 'dashed';
+                            } else {
+                                option.onclick = function() { selectTimeSlot(slot.id, slot.label); };
+                            }
+
+                            const capacityText = isFull ? 'Fully Booked' : 'Available: ' + slot.available + ' / ' + slot.max_capacity;
+                            const capacityColor = isFull ? 'color: #DC3545;' : 'color: #198754;';
+
+                            option.innerHTML = `
+                                <div class="time-slot-label">${slot.label}</div>
+                                <div class="time-slot-capacity" style="${capacityColor}">${capacityText}</div>
+                            `;
+                            container.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching time slots:', error);
+                        container.innerHTML = '<div style="padding: 15px; text-align: center; color: #DC3545;">Failed to load time slots. Please try again.</div>';
+                    });
+            }
+        });
+    }
+
+    // Show modal if flag is set
+    @if(session('show_appointment_modal'))
+        document.getElementById('appointment-modal').style.display = 'flex';
+    @endif
+});
+@endif
 
 </script>
 @endpush

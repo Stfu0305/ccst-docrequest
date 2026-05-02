@@ -208,53 +208,7 @@
 
 @section('right-panel')
     
-    <div class="ccst-card mb-0">
-        <div class="ccst-card-header blue">Request Overview</div>
-        <div class="ccst-card-body p-0">
-            <div class="rp-stat-row">
-                <span><i class="bi bi-folder2 me-2"></i> Total Requests</span>
-                <strong>{{ $totalRequests ?? 0 }}</strong>
-            </div>
-            <div class="rp-stat-row">
-                <span><i class="bi bi-hourglass-split me-2"></i> Pending</span>
-                <strong>{{ $pendingCount ?? 0 }}</strong>
-            </div>
-            <div class="rp-stat-row">
-                <span><i class="bi bi-x-circle me-2"></i> Cancelled</span>
-                <strong>{{ $cancelledCount ?? 0 }}</strong>
-            </div>
-            <div class="rp-stat-row">
-                <span><i class="bi bi-box-seam me-2"></i> Ready for Pickup</span>
-                <strong>{{ $readyCount ?? 0 }}</strong>
-            </div>
-            <div class="rp-stat-row" style="border-bottom:none;">
-                <span><i class="bi bi-check2-all me-2"></i> Received</span>
-                <strong>{{ $receivedCount ?? 0 }}</strong>
-            </div>
-        </div>
-    </div>
-
-    <div class="ccst-card mb-0">
-        <div class="ccst-card-header yellow">Quick Tips</div>
-        <div class="ccst-card-body p-0">
-            <div class="rp-guide-step">
-                <span class="rp-step-num">1</span>
-                <span>Verify payment status first</span>
-            </div>
-            <div class="rp-guide-step">
-                <span class="rp-step-num">2</span>
-                <span>Update status to Processing</span>
-            </div>
-            <div class="rp-guide-step">
-                <span class="rp-step-num">3</span>
-                <span>Set as Ready for Pickup → generates claiming number</span>
-            </div>
-            <div class="rp-guide-step" style="border-bottom:none;">
-                <span class="rp-step-num">4</span>
-                <span>Mark as Received when student picks up</span>
-            </div>
-        </div>
-    </div>
+    
 @endsection
 
 @push('styles')

@@ -144,8 +144,9 @@
         <thead>
             <tr>
                 <th class="checkbox-col">PAID</th>
+                <th style="width: 12%">Date</th>
                 <th style="width: 12%">Time Slot</th>
-                <th style="width: 25%">Student Name</th>
+                <th style="width: 20%">Student Name</th>
                 <th style="width: 12%">Student No.</th>
                 <th style="width: 15%">Reference No.</th>
                 <th style="width: 12%">Documents</th>
@@ -153,9 +154,10 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($todayAppointments as $appointment)
+            @forelse($appointments as $appointment)
             <tr>
                 <td class="checkbox-col"><span>☐</span></td>
+                <td>{{ $appointment->date }}</td>
                 <td>{{ $appointment->time_slot }}</td>
                 <td>
                     <div class="student-name">{{ $appointment->student_name }}</div>
@@ -170,8 +172,8 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" style="text-align: center; padding: 30px;">
-                    No appointments scheduled for today.
+                <td colspan="8" style="text-align: center; padding: 30px;">
+                    No appointments found for the selected period.
                 </td>
             </tr>
             @endforelse

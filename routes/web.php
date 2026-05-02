@@ -108,6 +108,7 @@ Route::middleware(['auth', 'role:student'])->prefix('student')->name('student.')
     
     // ── Appointments ─────────────────────────────────────────────────────────
     Route::controller(StudentAppointment::class)->group(function() {
+        Route::get('/appointments/available-slots', 'getAvailableSlots')->name('appointments.available-slots');
         Route::get('/appointments/create/{requestId}', 'create')->name('appointments.create');
         Route::post('/appointments', 'store')->name('appointments.store');
         Route::patch('/appointments/{id}', 'reschedule')->name('appointments.reschedule');

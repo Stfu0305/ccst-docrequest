@@ -9,50 +9,87 @@
         <h1 class="calendar-title">Appointment Calendar</h1>
     </div>
     <div class="calendar-actions">
-        <button class="btn-print-list" onclick="window.open('{{ route('registrar.appointments.print-cashier-list') }}', '_blank')">
-            <i class="bi bi-printer"></i> Print Cashier List
-        </button>
-    </div>
-</div>
-
-<div class="calendar-filters">
-    <div class="filter-chip-row">
-        <button type="button" class="filter-chip active" data-status="all">All</button>
-        <button type="button" class="filter-chip pending" data-status="pending">Pending</button>
-        <button type="button" class="filter-chip approved" data-status="approved">Approved</button>
-        <button type="button" class="filter-chip processing" data-status="processing">Processing</button>
-        <button type="button" class="filter-chip ready" data-status="ready_for_pickup">Ready for Pickup</button>
-        <button type="button" class="filter-chip completed" data-status="completed">Completed</button>
-        <button type="button" class="filter-chip declined" data-status="declined">Declined</button>
-    </div>
-    <div class="filter-controls">
-        <div class="year-month-selector">
-            <select id="calendarYearSelect" class="year-select">
-                <!-- Years will be populated by JS -->
-            </select>
-            <select id="calendarMonthSelect" class="month-select">
-                <option value="0">January</option>
-                <option value="1">February</option>
-                <option value="2">March</option>
-                <option value="3">April</option>
-                <option value="4">May</option>
-                <option value="5">June</option>
-                <option value="6">July</option>
-                <option value="7">August</option>
-                <option value="8">September</option>
-                <option value="9">October</option>
-                <option value="10">November</option>
-                <option value="11">December</option>
-            </select>
-        </div>
-        <div class="filter-search">
-            <input id="calendarSearchInput" type="search" placeholder="Search student name, ref, status..." autocomplete="off">
+        <div style="position: relative; display: inline-block;">
+            <button class="btn-print-list" onclick="document.getElementById('printDropdown').style.display = document.getElementById('printDropdown').style.display === 'block' ? 'none' : 'block'" style="background: #1B6B3A; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 600; border: none; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <i class="bi bi-printer"></i> Print Appointments ▼
+            </button>
+            <div id="printDropdown" style="display: none; position: absolute; right: 0; top: calc(100% + 5px); background: white; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; border: 1px solid #eee; z-index: 1000;">
+                <a href="javascript:void(0)" onclick="printRange('today')" style="display: block; padding: 10px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #eee;">Today</a>
+                <a href="javascript:void(0)" onclick="printRange('last_week')" style="display: block; padding: 10px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #eee;">Last Week</a>
+                <a href="javascript:void(0)" onclick="printRange('last_month')" style="display: block; padding: 10px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #eee;">Last Month</a>
+                <a href="javascript:void(0)" onclick="printRange('last_year')" style="display: block; padding: 10px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #eee;">Last Year</a>
+                <a href="javascript:void(0)" onclick="printRange('all')" style="display: block; padding: 10px 15px; color: #333; text-decoration: none;">All Time</a>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="calendar-container">
-    <div id="calendar"></div>
+<div class="calendar-filters" style="margin-bottom: 20px;">
+    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; width: 100%;">
+        {{-- Search Bar --}}
+        <div class="search-box-wrapper" style="flex: 1; min-width: 250px;">
+            <div class="search-box" style="background: white; padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; display: flex; align-items: center;">
+                <i class="bi bi-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #6c757d;"></i>
+                <input type="text" id="calendarSearchInput" placeholder="Search by reference number or student name..." style="width: 100%; border: none; padding-left: 36px; background: transparent; box-shadow: none; outline: none; font-size: 0.95rem; color: #1A1A1A;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; gap: 20px; align-items: flex-start;">
+    {{-- Left Side: Time Slots --}}
+    <div style="flex: 1; min-width: 0;">
+        <div class="ccst-card mb-4" style="border: 1px solid #D0DDD0; height: 100%;">
+            <div class="ccst-card-header blue" style="display: flex; justify-content: space-between; align-items: center; background: #1A9FE0;">
+                <span><i class="bi bi-clock-history me-2"></i> Time Slots</span>
+                <button class="btn-add-timeslot" onclick="openTimeSlotModal()" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.1rem; padding: 0 4px;">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+            <div class="ccst-card-body p-0" id="timeSlotsList">
+                <div class="rp-stat-row text-muted" style="padding: 14px 16px; color: #666 !important;">Loading time slots...</div>
+            </div>
+            <div class="time-slot-legend px-4 py-3">
+                <div class="legend-item"><span class="legend-dot legend-dot-red"></span> Pending</div>
+                <div class="legend-item"><span class="legend-dot legend-dot-yellow"></span> Processing</div>
+                <div class="legend-item"><span class="legend-dot legend-dot-orange"></span> Ready for Pickup</div>
+                <div class="legend-item"><span class="legend-dot legend-dot-green"></span> Received</div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Right Side: Calendar --}}
+    <div style="flex: 1; min-width: 0;">
+        <div class="calendar-container">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+{{-- Custom Month/Year Picker Popup --}}
+<div id="monthYearPickerPopup" style="display: none; position: fixed; z-index: 99999; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #D0DDD0;">
+    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+        <select id="popupMonthSelect" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; outline: none; font-size: 0.85rem;">
+            <option value="0">January</option>
+            <option value="1">February</option>
+            <option value="2">March</option>
+            <option value="3">April</option>
+            <option value="4">May</option>
+            <option value="5">June</option>
+            <option value="6">July</option>
+            <option value="7">August</option>
+            <option value="8">September</option>
+            <option value="9">October</option>
+            <option value="10">November</option>
+            <option value="11">December</option>
+        </select>
+        <select id="popupYearSelect" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; outline: none; font-size: 0.85rem;">
+        </select>
+    </div>
+    <div style="text-align: right;">
+        <button id="popupCancelBtn" style="background: none; border: none; padding: 4px 8px; cursor: pointer; color: #666; font-size: 0.8rem;">Cancel</button>
+        <button id="popupApplyBtn" style="background: #1B6B3A; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600;">Go</button>
+    </div>
 </div>
 
 {{-- Appointment Details Modal --}}
@@ -123,115 +160,70 @@
     </div>
 </div>
 
+{{-- Time Slot Modal --}}
+<div id="timeSlotModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width: 450px;">
+        <div class="modal-header-custom">
+            <h4 id="timeSlotModalTitle"><i class="bi bi-plus-circle me-2"></i>Add Time Slot</h4>
+            <button type="button" class="modal-close" onclick="closeTimeSlotModal()">&times;</button>
+        </div>
+        <form id="timeSlotForm">
+            @csrf
+            <input type="hidden" id="timeSlotId" name="id" value="">
+            <div class="modal-body-custom">
+                <div class="form-group">
+                    <label>Slot Label <span class="required">*</span></label>
+                    <input type="text" name="label" id="slotLabel" class="form-input" placeholder="e.g., 8:00 AM - 9:00 AM" required>
+                </div>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label>Start Time <span class="required">*</span></label>
+                        <input type="time" name="start_time" id="slotStartTime" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Time <span class="required">*</span></label>
+                        <input type="time" name="end_time" id="slotEndTime" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Max Capacity <span class="required">*</span></label>
+                    <input type="number" name="max_capacity" id="slotMaxCapacity" class="form-input" value="5" min="1" max="20" required>
+                    <small class="form-hint">Maximum number of appointments per time slot per day</small>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-cancel-modal" onclick="closeTimeSlotModal()">Cancel</button>
+                <button type="submit" class="btn-save-modal">Save Time Slot</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Delete Confirmation Modal --}}
+<div id="deleteSlotModal" class="modal-overlay" style="display:none;">
+    <div class="modal-container" style="max-width: 400px;">
+        <div class="modal-header-custom" style="background:#DC3545;">
+            <h4><i class="bi bi-exclamation-triangle me-2"></i>Delete Time Slot</h4>
+            <button type="button" class="modal-close" onclick="closeDeleteSlotModal()">&times;</button>
+        </div>
+        <div class="modal-body-custom">
+            <p>Are you sure you want to delete this time slot?</p>
+            <p class="text-muted" style="font-size:0.75rem;">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer-custom">
+            <button type="button" class="btn-cancel-modal" onclick="closeDeleteSlotModal()">Cancel</button>
+            <button type="button" class="btn-delete-confirm" id="confirmDeleteSlotBtn">Delete Permanently</button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('right-panel')
-    <div class="ccst-card mb-0">
-        <div class="ccst-card-header blue" style="display: flex; justify-content: space-between; align-items: center;">
-            <span><i class="bi bi-clock-history me-2"></i> Time Slots</span>
-            <button class="btn-add-timeslot" onclick="openTimeSlotModal()">
-                <i class="bi bi-plus-lg"></i>
-            </button>
-        </div>
-        <div class="ccst-card-body p-0" id="timeSlotsList">
-            <div class="rp-stat-row text-muted">Loading time slots...</div>
-        </div>
-    </div>
+   
 
-    <div class="ccst-card mb-0">
-        <div class="ccst-card-header yellow">Legend</div>
-        <div class="ccst-card-body p-0">
-            <div class="legend-item"><span class="legend-color" style="background:#F5C518;"></span><span>Scheduled Appt.</span></div>
-            <div class="legend-item"><span class="legend-color" style="background:#1B6B3A;"></span><span>Completed Appt.</span></div>
-            <div class="legend-item"><span class="legend-color" style="background:#DC3545;"></span><span>Missed Appt.</span></div>
-            <div class="legend-item"><span class="legend-color" style="background:#AAAAAA;"></span><span>Cancelled Appt.</span></div>
-            <div style="padding:8px 14px;font-size:0.7rem;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.4px;margin-top:4px;">Request Dots</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#DC3545;"></span><span>Pending Requests</span></div>
-            <div class="legend-item"><span class="legend-dot" style="background:#F97316;"></span><span>Processing / Approved</span></div>
-            <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span><span>Ready for Pickup</span></div>
-            <div class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span><span>Completed Requests</span></div>
-            <div class="legend-item"><span class="legend-dot" style="background:#6B7280;"></span><span>Declined Requests</span></div>
-        </div>
-    </div>
+    
 
-    <div class="ccst-card mb-0">
-        <div class="ccst-card-header yellow">Quick Tips</div>
-        <div class="ccst-card-body p-0">
-            <div class="rp-guide-step">
-                <span class="rp-step-num">1</span>
-                <span>Click on appointment to view details</span>
-            </div>
-            <div class="rp-guide-step">
-                <span class="rp-step-num">2</span>
-                <span>Drag and drop to reschedule</span>
-            </div>
-            <div class="rp-guide-step">
-                <span class="rp-step-num">3</span>
-                <span>Use the toolbar to switch views</span>
-            </div>
-            <div class="rp-guide-step" style="border-bottom:none;">
-                <span class="rp-step-num">4</span>
-                <span>Click Print to generate cashier list</span>
-            </div>
-        </div>
-    </div>
-
-    {{-- Time Slot Modal --}}
-    <div id="timeSlotModal" class="modal-overlay" style="display:none;">
-        <div class="modal-container" style="max-width: 450px;">
-            <div class="modal-header-custom">
-                <h4 id="timeSlotModalTitle"><i class="bi bi-plus-circle me-2"></i>Add Time Slot</h4>
-                <button type="button" class="modal-close" onclick="closeTimeSlotModal()">&times;</button>
-            </div>
-            <form id="timeSlotForm">
-                @csrf
-                <input type="hidden" id="timeSlotId" name="id" value="">
-                <div class="modal-body-custom">
-                    <div class="form-group">
-                        <label>Slot Label <span class="required">*</span></label>
-                        <input type="text" name="label" id="slotLabel" class="form-input" placeholder="e.g., 8:00 AM - 9:00 AM" required>
-                    </div>
-                    <div class="form-row-2">
-                        <div class="form-group">
-                            <label>Start Time <span class="required">*</span></label>
-                            <input type="time" name="start_time" id="slotStartTime" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label>End Time <span class="required">*</span></label>
-                            <input type="time" name="end_time" id="slotEndTime" class="form-input" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Max Capacity <span class="required">*</span></label>
-                        <input type="number" name="max_capacity" id="slotMaxCapacity" class="form-input" value="5" min="1" max="20" required>
-                        <small class="form-hint">Maximum number of appointments per time slot per day</small>
-                    </div>
-                </div>
-                <div class="modal-footer-custom">
-                    <button type="button" class="btn-cancel-modal" onclick="closeTimeSlotModal()">Cancel</button>
-                    <button type="submit" class="btn-save-modal">Save Time Slot</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- Delete Confirmation Modal --}}
-    <div id="deleteSlotModal" class="modal-overlay" style="display:none;">
-        <div class="modal-container" style="max-width: 400px;">
-            <div class="modal-header-custom" style="background:#DC3545;">
-                <h4><i class="bi bi-exclamation-triangle me-2"></i>Delete Time Slot</h4>
-                <button type="button" class="modal-close" onclick="closeDeleteSlotModal()">&times;</button>
-            </div>
-            <div class="modal-body-custom">
-                <p>Are you sure you want to delete this time slot?</p>
-                <p class="text-muted" style="font-size:0.75rem;">This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer-custom">
-                <button type="button" class="btn-cancel-modal" onclick="closeDeleteSlotModal()">Cancel</button>
-                <button type="button" class="btn-delete-confirm" id="confirmDeleteSlotBtn">Delete Permanently</button>
-            </div>
-        </div>
-    </div>
 
 @endsection
 
@@ -287,36 +279,94 @@
 
     .calendar-filters {
         display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
+        flex-direction: column;
+        gap: 18px;
         margin-bottom: 18px;
-        align-items: center;
-        justify-content: space-between;
     }
 
-    .filter-chip-row {
+    .filter-search-row {
         display: flex;
         flex-wrap: wrap;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .filter-search-row .filter-search {
+        flex: 1 1 320px;
+        min-width: 240px;
+    }
+
+    .filter-search-row .year-month-selector {
+        flex: 0 0 auto;
+        display: flex;
         gap: 8px;
         align-items: center;
     }
 
-    .filter-chip {
-        padding: 8px 14px;
-        border-radius: 999px;
-        border: 1px solid rgba(26, 159, 224, 0.2);
-        background: #f5f8ff;
-        color: #1A1A1A;
-        font-size: 0.82rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    .calendar-filter-tabs {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 14px;
+        width: 100%;
     }
 
-    .filter-chip.active,
-    .filter-chip:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    .stats-overview-card {
+        background: white;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .stats-overview-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+
+    .stats-overview-card.active {
+        background: #1B6B3A;
+        color: white;
+        border-color: #166534;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.14);
+    }
+
+    .stats-overview-card.active .stats-overview-icon,
+    .stats-overview-card.active .stats-overview-value,
+    .stats-overview-card.active .stats-overview-label {
+        color: white;
+    }
+
+    .stats-overview-card.active .stats-overview-icon i {
+        color: white !important;
+    }
+
+    .stats-overview-icon {
+        font-size: 1.8rem;
+        color: #1B6B3A;
+    }
+
+    .stats-overview-value {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: #1A1A1A;
+        line-height: 1.2;
+    }
+
+    .stats-overview-label {
+        font-size: 0.72rem;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .stats-overview-card.active .stats-overview-label {
+        color: rgba(255,255,255,0.85);
     }
 
     .filter-chip.pending { background: #FEE2E2; border-color: #FECACA; color: #991B1B; }
@@ -427,8 +477,21 @@
         font-size: 1.2rem;
         font-weight: 700;
         color: #1B6B3A;
-        margin: 0 auto;
-        width: auto;
+        margin: 0;
+        cursor: pointer;
+        position: relative;
+        padding-right: 15px;
+        display: inline-block;
+    }
+    
+    .fc-toolbar-title::after {
+        content: "▼";
+        font-size: 0.6em;
+        opacity: 0.6;
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
     }
 
     .fc-button-primary {
@@ -592,8 +655,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 14px;
-        border-bottom: 1px solid rgba(255,255,255,0.15);
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
         gap: 10px;
     }
 
@@ -602,15 +665,77 @@
     }
 
     .time-slot-label {
-        font-size: 0.75rem;
-        color: white;
+        font-size: 0.85rem;
+        color: #1A1A1A;
+        font-weight: 600;
         margin-bottom: 2px;
     }
 
     .time-slot-meta {
-        font-size: 0.65rem;
-        color: rgba(255,255,255,0.7);
+        font-size: 0.75rem;
+        color: #666;
     }
+
+    .status-dots-container {
+        display: inline-flex;
+        gap: 4px;
+        margin-left: 8px;
+        align-items: center;
+    }
+
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .status-dot-red {
+        background-color: #DC3545; /* Red for pending/cancelled */
+    }
+
+    .status-dot-yellow {
+        background-color: #FFC107; /* Yellow for processing */
+    }
+
+    .status-dot-orange {
+        background-color: #FD7E14; /* Orange for ready for pickup */
+    }
+
+    .status-dot-green {
+        background-color: #28A745; /* Green for received */
+    }
+
+    .time-slot-legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        background: #F8FAF8;
+        border-top: 1px solid #E5E7EB;
+    }
+
+    .time-slot-legend .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        color: #334155;
+        padding: 6px 0;
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .legend-dot-red { background: #DC3545; }
+    .legend-dot-yellow { background: #FFC107; }
+    .legend-dot-orange { background: #FD7E14; }
+    .legend-dot-green { background: #28A745; }
 
     .time-slot-actions {
         display: flex;
@@ -890,7 +1015,7 @@
 
     function setCalendarStatusFilter(status) {
         calendarStatusFilter = status;
-        document.querySelectorAll('.filter-chip').forEach(btn => {
+        document.querySelectorAll('.stats-overview-card').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.status === status);
         });
         if (calendar) {
@@ -899,7 +1024,7 @@
     }
 
     function setupCalendarFilters() {
-        document.querySelectorAll('.filter-chip').forEach(btn => {
+        document.querySelectorAll('.stats-overview-card').forEach(btn => {
             btn.addEventListener('click', function() {
                 setCalendarStatusFilter(this.dataset.status);
             });
@@ -916,64 +1041,7 @@
         }
     }
 
-    function setupYearMonthSelectors() {
-        const yearSelect = document.getElementById('calendarYearSelect');
-        const monthSelect = document.getElementById('calendarMonthSelect');
 
-        if (!yearSelect || !monthSelect || !calendar) return;
-
-        // Populate years (current year - 2 to current year + 5)
-        const currentYear = new Date().getFullYear();
-        yearSelect.innerHTML = '';
-        for (let year = currentYear - 2; year <= currentYear + 5; year++) {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            if (year === currentYear) option.selected = true;
-            yearSelect.appendChild(option);
-        }
-
-        // Set current month
-        const currentMonth = new Date().getMonth();
-        monthSelect.value = currentMonth;
-
-        // Event listeners
-        yearSelect.addEventListener('change', function() {
-            navigateToSelectedDate();
-        });
-
-        monthSelect.addEventListener('change', function() {
-            navigateToSelectedDate();
-        });
-    }
-
-    function navigateToSelectedDate() {
-        const yearSelect = document.getElementById('calendarYearSelect');
-        const monthSelect = document.getElementById('calendarMonthSelect');
-
-        if (!yearSelect || !monthSelect || !calendar) return;
-
-        const year = parseInt(yearSelect.value);
-        const month = parseInt(monthSelect.value);
-
-        // Navigate to the selected year/month
-        const targetDate = new Date(year, month, 1);
-        calendar.gotoDate(targetDate);
-    }
-
-    function updateYearMonthSelectors() {
-        if (!calendar) return;
-
-        const currentDate = calendar.getDate();
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-
-        const yearSelect = document.getElementById('calendarYearSelect');
-        const monthSelect = document.getElementById('calendarMonthSelect');
-
-        if (yearSelect) yearSelect.value = year;
-        if (monthSelect) monthSelect.value = month;
-    }
 
     function debounce(fn, delay) {
         let timer = null;
@@ -1095,10 +1163,13 @@
                 data.forEach(slot => {
                     const statusClass = slot.is_active ? 'status-active' : 'status-inactive';
                     const statusText = slot.is_active ? 'Active' : 'Inactive';
+                    
                     html += `
                         <div class="time-slot-item" data-id="${slot.id}">
                             <div class="time-slot-info">
-                                <div class="time-slot-label"><strong>${escapeHtml(slot.label)}</strong></div>
+                                <div class="time-slot-label">
+                                    <strong>${escapeHtml(slot.label)}</strong>
+                                </div>
                                 <div class="time-slot-meta">Max: ${slot.max_capacity} students</div>
                             </div>
                             <div class="time-slot-actions">
@@ -1356,7 +1427,7 @@
             headerToolbar: {
                 left: '',
                 center: 'title',
-                right: ''
+                right: 'prev,next'
             },
             editable: true,
             eventSources: [
@@ -1368,7 +1439,25 @@
             ],
             datesSet: function(info) {
                 fetchRequestsByDate(info.startStr.slice(0,10), info.endStr.slice(0,10));
-                updateYearMonthSelectors();
+                
+                // Add click-to-pick-month/year feature to the calendar title
+                const titleEl = document.querySelector('.fc-toolbar-title');
+                if (titleEl) {
+                    titleEl.title = 'Click to choose month and year';
+                    
+                    titleEl.onclick = function(e) {
+                        const popup = document.getElementById('monthYearPickerPopup');
+                        const rect = titleEl.getBoundingClientRect();
+                        
+                        popup.style.top = (rect.bottom + 5) + 'px';
+                        popup.style.left = (rect.left + (rect.width/2) - 100) + 'px';
+                        
+                        document.getElementById('popupMonthSelect').value = calendar.getDate().getMonth();
+                        document.getElementById('popupYearSelect').value = calendar.getDate().getFullYear();
+                        
+                        popup.style.display = 'block';
+                    };
+                }
             },
             eventDidMount: function(info) {
                 // Re-render dots after events render
@@ -1425,7 +1514,32 @@
         });
         calendar.render();
         setupCalendarFilters();
-        setupYearMonthSelectors();
+        loadTimeSlots();
+        
+        // Initialize Popup Logic
+        const popupYearSelect = document.getElementById('popupYearSelect');
+        const currY = new Date().getFullYear();
+        for (let y = currY - 5; y <= currY + 5; y++) {
+            popupYearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+        }
+        
+        document.getElementById('popupCancelBtn').onclick = function() {
+            document.getElementById('monthYearPickerPopup').style.display = 'none';
+        };
+        
+        document.getElementById('popupApplyBtn').onclick = function() {
+            const m = document.getElementById('popupMonthSelect').value;
+            const y = document.getElementById('popupYearSelect').value;
+            calendar.gotoDate(new Date(y, m, 1));
+            document.getElementById('monthYearPickerPopup').style.display = 'none';
+        };
+        
+        document.addEventListener('click', function(e) {
+            const popup = document.getElementById('monthYearPickerPopup');
+            if (popup.style.display === 'block' && !popup.contains(e.target) && !e.target.closest('.fc-toolbar-title')) {
+                popup.style.display = 'none';
+            }
+        });
         loadTimeSlots();
         } catch(e) {
             console.error('Calendar init error:', e);
@@ -1433,6 +1547,21 @@
             if (calEl) calEl.innerHTML = '<div class="calendar-error">Unable to load calendar. See browser console for details.</div>';
         }
     }
+    // Hide print dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('printDropdown');
+        const btn = document.querySelector('.btn-print-list');
+        if (dropdown && dropdown.style.display === 'block' && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+
+    // Print with range
+    function printRange(range) {
+        document.getElementById('printDropdown').style.display = 'none';
+        window.open('{{ route("registrar.appointments.print-cashier-list") }}?range=' + range, '_blank');
+    }
+    
     // Run immediately — @stack('scripts') is at bottom of <body> so DOM is ready
     initCalendar();
 </script>

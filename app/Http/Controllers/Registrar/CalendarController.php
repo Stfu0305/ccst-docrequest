@@ -23,7 +23,17 @@ class CalendarController extends Controller
             ->orderBy('start_time')
             ->get();
 
-        return view('registrar.calendar.index', compact('timeSlots'));
+        $totalRequests = DocumentRequest::count();
+        $pendingCount = DocumentRequest::where('status', 'pending')->count();
+        $approvedCount = DocumentRequest::whereIn('status', ['payment_method_set', 'payment_uploaded', 'payment_verified'])->count();
+        $processingCount = DocumentRequest::where('status', 'processing')->count();
+        $readyCount = DocumentRequest::where('status', 'ready_for_pickup')->count();
+        $completedCount = DocumentRequest::whereIn('status', ['received', 'completed'])->count();
+        $declinedCount = DocumentRequest::whereIn('status', ['cancelled', 'payment_rejected'])->count();
+
+        return view('registrar.calendar.index', compact(
+            'timeSlots', 'totalRequests', 'pendingCount', 'approvedCount', 'processingCount', 'readyCount', 'completedCount', 'declinedCount'
+        ));
     }
 
     /**
@@ -154,6 +164,44 @@ class CalendarController extends Controller
     public function getTimeSlots()
     {
         $timeSlots = TimeSlot::orderBy('start_time')->get();
+        
+        // Add appointment status counts for each time slot
+        $timeSlots->transform(function ($slot) {
+            // Get appointments for this time slot with their document request status
+            $appointments = Appointment::with('documentRequest')
+                ->where('time_slot_id', $slot->id)
+                ->where('appointment_date', '>=', Carbon::now()->format('Y-m-d')) // Only future appointments
+                ->get();
+            
+            $statusCounts = [
+                'pending' => 0,
+                'processing' => 0,
+                'ready_for_pickup' => 0,
+                'received' => 0,
+                'cancelled' => 0,
+            ];
+            
+            foreach ($appointments as $appointment) {
+                $docRequest = $appointment->documentRequest;
+                if ($docRequest) {
+                    $status = $docRequest->status;
+                    if (in_array($status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_verified'])) {
+                        $statusCounts['pending']++;
+                    } elseif ($status === 'processing') {
+                        $statusCounts['processing']++;
+                    } elseif ($status === 'ready_for_pickup') {
+                        $statusCounts['ready_for_pickup']++;
+                    } elseif (in_array($status, ['received', 'completed'])) {
+                        $statusCounts['received']++;
+                    } elseif (in_array($status, ['cancelled', 'payment_rejected'])) {
+                        $statusCounts['cancelled']++;
+                    }
+                }
+            }
+            
+            $slot->status_counts = $statusCounts;
+            return $slot;
+        });
         
         return response()->json($timeSlots);
     }
