@@ -199,15 +199,11 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
 
     // ── Document Generation ──────────────────────────────────────────────
     Route::prefix('documents')->name('documents.')->group(function () {
-<<<<<<< HEAD
         Route::get('/prepare/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'prepare'])->name('prepare');
         Route::post('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
         Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate-get');
         Route::get('/generate-all/{requestId}', [DocumentGeneratorController::class, 'generateAll'])->name('generate-all');
-=======
-        Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
         Route::post('/print-selected', [DocumentGeneratorController::class, 'printSelected'])->name('print-selected');
->>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
         Route::get('/preview/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'preview'])->name('preview');
         Route::get('/download', [DocumentGeneratorController::class, 'download'])->name('download');
     });

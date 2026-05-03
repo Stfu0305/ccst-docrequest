@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\PaymentProof;
 
 class DocumentRequest extends Model
 {
@@ -58,17 +57,6 @@ class DocumentRequest extends Model
         return $this->belongsTo(Appointment::class);
     }
 
-    public function paymentProof()
-    {
-        return $this->hasOne(PaymentProof::class)->latestOfMany();
-    }
-
-    public function paymentProofs()
-    {
-        return $this->hasMany(PaymentProof::class);
-    }
-
-
     public function processedBy()
     {
         return $this->belongsTo(User::class, 'processed_by');
@@ -89,8 +77,6 @@ class DocumentRequest extends Model
         return $this->hasMany(StatusLog::class);
     }
 
-<<<<<<< HEAD
-=======
     // Helper method to get document types as array
     public function getDocumentTypesArrayAttribute()
     {
@@ -103,7 +89,6 @@ class DocumentRequest extends Model
         $this->attributes['document_types'] = is_array($value) ? implode(',', $value) : $value;
     }
 
->>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
     // Scopes
     public function scopePending($query)
     {

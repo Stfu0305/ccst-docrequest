@@ -98,32 +98,6 @@
                         </td>
                         <td style="width: 20%">
                             <div class="action-buttons">
-<<<<<<< HEAD
-                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-                                
-                                {{-- Generate Document Button (for printable documents) --}}
-                                @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_verified', 'processing', 'ready_for_pickup']))
-                                    @foreach($request->items as $item)
-                                        @if($item->documentType->is_printable)
-                                            @php
-                                                $isDocx = $item->documentType->template_path && \Illuminate\Support\Facades\Storage::exists($item->documentType->template_path);
-                                            @endphp
-                                            <a href="{{ route('registrar.documents.prepare', [$request->id, $item->document_type_id]) }}" 
-                                               class="action-btn-generate" title="Prepare {{ $item->documentType->name }}">
-                                                <i class="bi {{ $isDocx ? 'bi-file-earmark-word' : 'bi-file-pdf' }}"></i> {{ $item->documentType->code }}
-                                            </a>
-                                        @endif
-                                    @endforeach
-                                @endif
-                                
-                                {{-- Status Dropdown --}}
-                                @if(!in_array($request->status, ['received', 'cancelled']))
-                                <div class="status-dropdown">
-                                    <button class="action-btn-status" onclick="toggleStatusDropdown({{ $request->id }})">
-                                        <i class="bi bi-arrow-repeat"></i> Status
-=======
                                 {{-- Completed -> Details --}}
                                 @if($request->status === 'completed')
                                     <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-details" title="View Details">
@@ -138,7 +112,6 @@
                                 @elseif($request->status === 'pending' && !$request->is_printable)
                                     <button class="action-btn-ready" onclick="markAsReady({{ $request->id }}, '{{ $request->reference_number }}')">
                                         <i class="bi bi-check-circle"></i> Mark as Ready
->>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
                                     </button>
                                 {{-- Default fallback (e.g. Received/Cancelled/Other Pending) --}}
                                 @else
@@ -178,8 +151,59 @@
 @endsection
 
 @section('right-panel')
-    
-    
+    <div class="rp-date-card">
+        <div class="rp-date-day">{{ now()->format('d') }}</div>
+        <div class="rp-date-month">{{ now()->format('F Y') }}</div>
+        <div class="rp-date-time" id="live-time">--:-- --</div>
+    </div>
+
+    <div class="ccst-card mb-0">
+        <div class="ccst-card-header blue">Request Overview</div>
+        <div class="ccst-card-body p-0">
+            <div class="rp-stat-row">
+                <span><i class="bi bi-folder2 me-2"></i> Total Requests</span>
+                <strong>{{ $totalRequests ?? 0 }}</strong>
+            </div>
+            <div class="rp-stat-row">
+                <span><i class="bi bi-hourglass-split me-2"></i> Pending</span>
+                <strong>{{ $pendingCount ?? 0 }}</strong>
+            </div>
+            <div class="rp-stat-row">
+                <span><i class="bi bi-x-circle me-2"></i> Cancelled</span>
+                <strong>{{ $cancelledCount ?? 0 }}</strong>
+            </div>
+            <div class="rp-stat-row">
+                <span><i class="bi bi-box-seam me-2"></i> Ready for Pickup</span>
+                <strong>{{ $readyCount ?? 0 }}</strong>
+            </div>
+            <div class="rp-stat-row" style="border-bottom:none;">
+                <span><i class="bi bi-check2-all me-2"></i> Received</span>
+                <strong>{{ $receivedCount ?? 0 }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="ccst-card mb-0">
+        <div class="ccst-card-header yellow">Quick Tips</div>
+        <div class="ccst-card-body p-0">
+            <div class="rp-guide-step">
+                <span class="rp-step-num">1</span>
+                <span>Verify payment status first</span>
+            </div>
+            <div class="rp-guide-step">
+                <span class="rp-step-num">2</span>
+                <span>Update status to Processing</span>
+            </div>
+            <div class="rp-guide-step">
+                <span class="rp-step-num">3</span>
+                <span>Set as Ready for Pickup → generates claiming number</span>
+            </div>
+            <div class="rp-guide-step" style="border-bottom:none;">
+                <span class="rp-step-num">4</span>
+                <span>Mark as Received when student picks up</span>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -528,9 +552,37 @@
         color: white;
     }
 
-    
+    .rp-date-card {
+        border-radius: 10px;
+        padding: 16px;
+        text-align: center;
+        color: white;
+        backdrop-filter: blur(8px);
+        margin-bottom: 10px;
+    }
 
-    
+    .rp-date-day {
+        font-size: 3.25rem;
+        font-weight: 700;
+        line-height: 1;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        margin-top: 20px;
+    }
+
+    .rp-date-month {
+        font-size: 1.25rem;
+        opacity: 0.85;
+        margin-top: 2px;
+    }
+
+    .rp-date-time {
+        font-size: 1.50rem;
+        font-weight: 600;
+        margin-top: 6px;
+        opacity: 0.9;
+        letter-spacing: 1px;
+    }
+
     .rp-guide-step {
         display: flex;
         align-items: flex-start;
