@@ -25,6 +25,8 @@ class DocumentRequest extends Model
         'is_walk_in',
         'walk_in_handled_by',
         'is_printable',
+        'payment_status',
+        'paid_at',
         'completed_at',
     ];
 

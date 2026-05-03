@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\DocumentRequest;
 use App\Models\TimeSlot;
+use App\Notifications\AppointmentConfirmedNotification;
 use App\Traits\SendsDatabaseNotifications;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -77,6 +78,9 @@ class AppointmentController extends Controller
         $url = route('student.requests.history');
         $this->sendNotificationToCurrentUser($message, $url);
 
+        // Send email notification
+        $user->notify(new AppointmentConfirmedNotification($appointment));
+
         return redirect()
             ->route('student.requests.history')
             ->with('success', 'Appointment booked successfully! Your pickup appointment is scheduled.');
@@ -139,6 +143,9 @@ class AppointmentController extends Controller
                    ' at ' . $timeSlot->label;
         $url = route('student.requests.history');
         $this->sendNotificationToCurrentUser($message, $url);
+
+        // Send email notification for reschedule
+        $user->notify(new AppointmentConfirmedNotification($appointment));
 
         return redirect()
             ->route('student.requests.history')

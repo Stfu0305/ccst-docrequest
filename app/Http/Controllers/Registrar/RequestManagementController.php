@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Registrar;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentRequest;
 use App\Models\StatusLog;
+use App\Notifications\DocumentReadyNotification;
+use App\Notifications\RequestCompletedNotification;
 use App\Traits\SendsDatabaseNotifications;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class RequestManagementController extends Controller
 {
@@ -169,12 +172,13 @@ class RequestManagementController extends Controller
             'notes' => 'Request marked as completed.',
         ]);
         
-        // Send notification to student
+        // Send database + email notification to student
         $student = $docRequest->user;
         if ($student) {
             $message = "✅ Your documents for request {$docRequest->reference_number} have been completed. Thank you for using CCST DocRequest!";
             $url = route('student.requests.history');
             $this->sendNotification($student, $message, $url);
+            $student->notify(new RequestCompletedNotification($docRequest));
         }
         
         session()->flash('check_notifications', true);
@@ -209,12 +213,13 @@ class RequestManagementController extends Controller
             'notes' => "Marked as ready for pickup.",
         ]);
         
-        // Notify student
+        // Send database + email notification to student
         $student = $docRequest->user;
         if ($student) {
             $message = "📦 Your request {$docRequest->reference_number} is ready for pickup! Please proceed to the registrar's office to claim your documents.";
             $url = route('student.requests.history');
             $this->sendNotification($student, $message, $url);
+            $student->notify(new DocumentReadyNotification($docRequest));
         }
 
         if (request()->ajax()) {
@@ -240,5 +245,44 @@ class RequestManagementController extends Controller
             'completed' => "✅ Your documents for request {$referenceNumber} have been completed. Thank you for using CCST DocRequest!",
             default => "Your request {$referenceNumber} status has been updated to: " . ucfirst(str_replace('_', ' ', $status)),
         };
+    }
+
+    /**
+     * Collect payment for an online request (Over-the-Counter Cash)
+     */
+    public function collectPayment($id)
+    {
+        $request = DocumentRequest::with(['items.documentType', 'user'])->findOrFail($id);
+        
+        if ($request->payment_status === 'paid') {
+            return back()->with('error', 'Payment already recorded for this request.');
+        }
+
+        // Update payment status and set status to ready_for_pickup if it's pending and not printable
+        $updateData = [
+            'payment_status' => 'paid',
+            'paid_at' => now(),
+        ];
+        
+        // If it's a physical document request waiting for payment, mark it as ready for pickup 
+        // (assuming registrar is printing it or handing it over now)
+        if ($request->status === 'pending' && !$request->is_printable) {
+            $updateData['status'] = 'ready_for_pickup';
+            
+            // Log the status change too
+            StatusLog::create([
+                'document_request_id' => $request->id,
+                'changed_by' => Auth::id(),
+                'old_status' => 'pending',
+                'new_status' => 'ready_for_pickup',
+                'notes' => 'Status updated to ready after payment collection.',
+            ]);
+        }
+
+        $request->update($updateData);
+
+        // Generate receipt PDF
+        $pdf = Pdf::loadView('registrar.walkin.receipt-pdf', ['request' => $request]);
+        return $pdf->download('receipt-'.$request->reference_number.'.pdf');
     }
 }

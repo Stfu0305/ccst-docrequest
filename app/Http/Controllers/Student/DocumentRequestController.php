@@ -7,6 +7,7 @@ use App\Models\DocumentRequest;
 use App\Models\DocumentRequestItem;
 use App\Models\DocumentType;
 use App\Models\StatusLog;
+use App\Notifications\RequestSubmittedNotification;
 use App\Traits\SendsDatabaseNotifications;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -112,10 +113,13 @@ class DocumentRequestController extends Controller
             'notes'               => 'Request submitted by student.',
         ]);
 
-        // Send notification
+        // Send database notification
         $message = 'Your request has been submitted! Reference: ' . $docRequest->reference_number;
         $this->sendNotificationToCurrentUser($message, route('student.requests.show', $docRequest->id));
         session()->flash('check_notifications', true);
+
+        // Send confirmation email
+        $user->notify(new RequestSubmittedNotification($docRequest));
 
         // Redirect based on printability
         if ($allPrintable) {

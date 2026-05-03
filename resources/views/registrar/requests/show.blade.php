@@ -111,6 +111,16 @@
                 </button>
             @endif
 
+            @if($request->payment_status !== 'paid')
+                <form action="{{ route('registrar.requests.collect-payment', $request->id) }}" method="POST" style="display:inline;">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn-action" style="background:#198754;" onclick="return confirm('Collect payment and print receipt?')">
+                        <i class="bi bi-cash-stack"></i> Collect Payment & Receipt
+                    </button>
+                </form>
+            @endif
+
             <a href="{{ route('registrar.requests.index') }}" class="btn-back mt-0">
                 <i class="bi bi-arrow-left me-1"></i> Back to Requests List
             </a>
