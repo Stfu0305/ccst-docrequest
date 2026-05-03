@@ -33,6 +33,8 @@ class User extends Authenticatable
         'is_walk_in',
         'walk_in_registered_by',
         'walk_in_registered_at',
+        'is_active',
+        'is_admin',
     ];
 
     protected $hidden = [

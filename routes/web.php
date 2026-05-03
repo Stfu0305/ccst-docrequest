@@ -23,6 +23,9 @@ use App\Http\Controllers\Registrar\CalendarController;
 // use App\Http\Controllers\Registrar\WalkInController;
 use App\Http\Controllers\Registrar\DocumentGeneratorController;
 use App\Http\Controllers\Registrar\EmailTemplateController;
+use App\Http\Controllers\Registrar\StudentManagementController;
+use App\Http\Controllers\Registrar\DocumentTypeController;
+use App\Http\Controllers\Registrar\RegistrarManagementController;
 
 
 // Cashier Controllers
@@ -137,6 +140,7 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::patch('/requests/{id}/received', 'markReceived')->name('requests.markReceived');
         Route::patch('/requests/{id}/completed', 'markAsCompleted')->name('requests.completed');
         Route::patch('/requests/{id}/mark-ready', [RequestManagementController::class, 'markAsReady'])->name('requests.mark-ready');
+        Route::patch('/requests/{id}/collect-payment', 'collectPayment')->name('requests.collect-payment');
     });
 
     // ── Appointments Management ─────────────────────────────────────────
@@ -174,13 +178,18 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
 
 
 
-    // ── Student Verification ──────────────────────────────────────────────
+    // ── Student Verification & Management ──────────────────────────────────────────────
     Route::prefix('students')->name('students.')->group(function () {
+        Route::get('/', [StudentManagementController::class, 'index'])->name('index');
         Route::get('/pending', [StudentVerificationController::class, 'pending'])->name('pending');
         Route::patch('/{id}/verify', [StudentVerificationController::class, 'verify'])->name('verify');
         Route::post('/verify-bulk', [StudentVerificationController::class, 'verifyBulk'])->name('verify-bulk');
         Route::get('/{id}/id', [StudentVerificationController::class, 'showId'])->name('show-id');
         Route::delete('/{id}/reject', [StudentVerificationController::class, 'reject'])->name('reject');
+        
+        Route::get('/{id}', [StudentManagementController::class, 'show'])->name('show');
+        Route::patch('/{id}/toggle-active', [StudentManagementController::class, 'toggleActive'])->name('toggle-active');
+        Route::post('/{id}/send-reset', [StudentManagementController::class, 'sendPasswordReset'])->name('send-reset');
     });
 
     // ── Calendar ──────────────────────────────────────────────────────────
@@ -199,15 +208,11 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
 
     // ── Document Generation ──────────────────────────────────────────────
     Route::prefix('documents')->name('documents.')->group(function () {
-<<<<<<< HEAD
         Route::get('/prepare/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'prepare'])->name('prepare');
         Route::post('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
         Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate-get');
         Route::get('/generate-all/{requestId}', [DocumentGeneratorController::class, 'generateAll'])->name('generate-all');
-=======
-        Route::get('/generate/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'generate'])->name('generate');
         Route::post('/print-selected', [DocumentGeneratorController::class, 'printSelected'])->name('print-selected');
->>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
         Route::get('/preview/{requestId}/{documentTypeId}', [DocumentGeneratorController::class, 'preview'])->name('preview');
         Route::get('/download', [DocumentGeneratorController::class, 'download'])->name('download');
     });
@@ -234,6 +239,17 @@ Route::middleware(['auth', 'role:registrar'])->prefix('registrar')->name('regist
         Route::post('/{id}/reset', [EmailTemplateController::class, 'reset'])->name('reset');
         Route::get('/{id}/preview', [EmailTemplateController::class, 'preview'])->name('preview');
         Route::get('/email-templates/{id}', [EmailTemplateController::class, 'show'])->name('email-templates.show');
+    });
+
+    // ── Document Types Management ──────────────────────────────────────────────
+    Route::resource('document-types', DocumentTypeController::class)->except(['show']);
+
+    // ── Manage Registrars ──────────────────────────────────────────────────
+    Route::prefix('manage')->name('manage.')->group(function () {
+        Route::get('/', [RegistrarManagementController::class, 'index'])->name('index');
+        Route::get('/create', [RegistrarManagementController::class, 'create'])->name('create');
+        Route::post('/', [RegistrarManagementController::class, 'store'])->name('store');
+        Route::delete('/{id}', [RegistrarManagementController::class, 'destroy'])->name('destroy');
     });
 
 });
@@ -299,4 +315,42 @@ Route::get('/debug-notifications', function () {
     }
     
     return response()->json($result);
+})->middleware('auth');
+
+// ═══ TEMPORARY: Test email sending ═══════════════════════════════════════
+Route::get('/test-email', function () {
+    $user = auth()->user();
+    
+    // Test 1: Raw email
+    try {
+        \Illuminate\Support\Facades\Mail::raw(
+            'This is a test email from CCST DocRequest. If you received this, email sending works!',
+            function ($message) use ($user) {
+                $message->to($user->email)->subject('CCST DocRequest - Email Test');
+            }
+        );
+        $rawResult = '✅ Raw email sent successfully to ' . $user->email;
+    } catch (\Exception $e) {
+        $rawResult = '❌ Raw email failed: ' . $e->getMessage();
+    }
+    
+    // Test 2: Notification email (AccountVerified as test)
+    try {
+        $user->notify(new \App\Notifications\AccountVerifiedNotification());
+        $notifResult = '✅ AccountVerifiedNotification sent successfully';
+    } catch (\Exception $e) {
+        $notifResult = '❌ Notification failed: ' . $e->getMessage();
+    }
+    
+    return response()->json([
+        'raw_email' => $rawResult,
+        'notification_email' => $notifResult,
+        'mail_config' => [
+            'mailer' => config('mail.default'),
+            'host' => config('mail.mailers.smtp.host'),
+            'port' => config('mail.mailers.smtp.port'),
+            'from' => config('mail.from.address'),
+            'queue' => config('queue.default'),
+        ],
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 })->middleware('auth');

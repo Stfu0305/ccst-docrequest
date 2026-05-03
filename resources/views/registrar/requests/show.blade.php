@@ -39,39 +39,6 @@
         {{-- Requested Documents (Print Selection) --}}
         <div class="detail-section">
             <h3><i class="bi bi-file-earmark-text me-2"></i>Requested Documents</h3>
-<<<<<<< HEAD
-            <table class="docs-table">
-                <thead>
-                    <tr>
-                        <th>Document</th>
-                        <th class="text-center">Year/Sem</th>
-                        <th class="text-center">Copies</th>
-                        <th class="text-end">Fee</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($request->items as $item)
-                    <tr>
-                        <td><strong>{{ $item->documentType->name }}</strong></td>
-                        <td class="text-center">{{ $item->assessment_year ?? 'N/A' }} / {{ $item->semester ?? 'N/A' }}</td>
-                        <td class="text-center">{{ $item->copies }}</td>
-                        <td class="text-end">₱{{ number_format($item->fee * $item->copies, 2) }}</td>
-                        <td class="text-center">
-                            @if($item->documentType->is_printable)
-                                <a href="{{ route('registrar.documents.prepare', [$request->id, $item->document_type_id]) }}" 
-                                   class="btn btn-sm btn-primary">
-                                    <i class="bi bi-pencil-square me-1"></i> Prepare
-                                </a>
-                            @else
-                                <span class="text-muted small">Not Printable</span>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-=======
             <form id="printSelectedForm">
                 @csrf
                 <input type="hidden" name="request_id" value="{{ $request->id }}">
@@ -133,7 +100,6 @@
                 </div>
                 @endif
             </form>
->>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
         </div>
 
         {{-- Action Buttons --}}
@@ -143,6 +109,16 @@
                 <button onclick="markAsReady({{ $request->id }})" class="btn-action btn-processing">
                     <i class="bi bi-check-circle"></i> Mark as Ready for Pickup
                 </button>
+            @endif
+
+            @if($request->payment_status !== 'paid')
+                <form action="{{ route('registrar.requests.collect-payment', $request->id) }}" method="POST" style="display:inline;">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn-action" style="background:#198754;" onclick="return confirm('Collect payment and print receipt?')">
+                        <i class="bi bi-cash-stack"></i> Collect Payment & Receipt
+                    </button>
+                </form>
             @endif
 
             <a href="{{ route('registrar.requests.index') }}" class="btn-back mt-0">

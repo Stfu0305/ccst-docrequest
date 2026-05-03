@@ -607,12 +607,23 @@
                 <a href="{{ route('registrar.calendar') }}" class="{{ request()->routeIs('registrar.calendar') ? 'active' : '' }}">
                     Calendar
                 </a>
+                <a href="{{ route('registrar.students.index') }}" class="{{ request()->routeIs('registrar.students.*') ? 'active' : '' }}">
+                    Students
+                </a>
+                <a href="{{ route('registrar.document-types.index') }}" class="{{ request()->routeIs('registrar.document-types.*') ? 'active' : '' }}">
+                    Documents
+                </a>
                 <a href="{{ route('registrar.reports.index') }}" class="{{ request()->routeIs('registrar.reports.*') ? 'active' : '' }}">
                     Reports
                 </a>
                 <a href="{{ route('registrar.account') }}" class="{{ request()->routeIs('registrar.account') ? 'active' : '' }}">
                     Account
                 </a>
+                @if(auth()->check() && auth()->user()->is_admin)
+                <a href="{{ route('registrar.manage.index') }}" class="{{ request()->routeIs('registrar.manage.*') ? 'active' : '' }}">
+                    Manage Staff
+                </a>
+                @endif
             </nav>
 
             <div class="sidebar-footer">

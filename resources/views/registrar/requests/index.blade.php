@@ -98,32 +98,6 @@
                         </td>
                         <td style="width: 20%">
                             <div class="action-buttons">
-<<<<<<< HEAD
-                                <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-view">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-                                
-                                {{-- Generate Document Button (for printable documents) --}}
-                                @if(in_array($request->status, ['pending', 'payment_method_set', 'payment_uploaded', 'payment_verified', 'processing', 'ready_for_pickup']))
-                                    @foreach($request->items as $item)
-                                        @if($item->documentType->is_printable)
-                                            @php
-                                                $isDocx = $item->documentType->template_path && \Illuminate\Support\Facades\Storage::exists($item->documentType->template_path);
-                                            @endphp
-                                            <a href="{{ route('registrar.documents.prepare', [$request->id, $item->document_type_id]) }}" 
-                                               class="action-btn-generate" title="Prepare {{ $item->documentType->name }}">
-                                                <i class="bi {{ $isDocx ? 'bi-file-earmark-word' : 'bi-file-pdf' }}"></i> {{ $item->documentType->code }}
-                                            </a>
-                                        @endif
-                                    @endforeach
-                                @endif
-                                
-                                {{-- Status Dropdown --}}
-                                @if(!in_array($request->status, ['received', 'cancelled']))
-                                <div class="status-dropdown">
-                                    <button class="action-btn-status" onclick="toggleStatusDropdown({{ $request->id }})">
-                                        <i class="bi bi-arrow-repeat"></i> Status
-=======
                                 {{-- Completed -> Details --}}
                                 @if($request->status === 'completed')
                                     <a href="{{ route('registrar.requests.show', $request->id) }}" class="action-btn-details" title="View Details">
@@ -138,7 +112,6 @@
                                 @elseif($request->status === 'pending' && !$request->is_printable)
                                     <button class="action-btn-ready" onclick="markAsReady({{ $request->id }}, '{{ $request->reference_number }}')">
                                         <i class="bi bi-check-circle"></i> Mark as Ready
->>>>>>> 2eeafc066e5fe6e38a97d7e5720d7150ab60ddf9
                                     </button>
                                 {{-- Default fallback (e.g. Received/Cancelled/Other Pending) --}}
                                 @else
@@ -178,8 +151,7 @@
 @endsection
 
 @section('right-panel')
-    
-    
+
 @endsection
 
 @push('styles')
@@ -528,9 +500,7 @@
         color: white;
     }
 
-    
 
-    
     .rp-guide-step {
         display: flex;
         align-items: flex-start;
